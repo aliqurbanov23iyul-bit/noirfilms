@@ -11,23 +11,26 @@ export function mountChat(
     suggestions,
     placeholder,
     context = "",
+    agentName = "NOIR AI",
+    footnote = "Gemini ilə · AI səhv edə bilər. Seçimləri yoxlayın.",
+    busyText = "NOIR AI düşünür…",
     send,
     choose,
   },
 ) {
   let busy = false;
-  root.innerHTML = `<div class="cinema-chat"><div class="chat-context">${icon("spark")}<span>${esc(context || "Əhvalını de. Növbəti hekayəni birlikdə tapaq.")}</span></div><div class="chat-log" role="log" aria-label="NOIR AI söhbəti" aria-live="polite" aria-relevant="additions"></div><div class="chat-suggestions">${suggestions.map((text, index) => `<button type="button" data-prompt="${index}">${esc(text)} ${icon("arrow")}</button>`).join("")}</div><p class="chat-status" role="status"></p><form class="chat-composer"><label class="sr-chat" for="chat-input">Mesajınız</label><textarea id="chat-input" rows="2" maxlength="1000" required placeholder="${esc(placeholder)}"></textarea><button type="submit" aria-label="Mesajı göndər">${icon("arrow")}</button><small>Gemini ilə · AI səhv edə bilər. Seçimləri yoxlayın.</small></form></div>`;
+  root.innerHTML = `<div class="cinema-chat"><div class="chat-context">${icon("spark")}<span>${esc(context || "Əhvalını de. Növbəti hekayəni birlikdə tapaq.")}</span></div><div class="chat-log" role="log" aria-label="NOIR AI söhbəti" aria-live="polite" aria-relevant="additions"></div><div class="chat-suggestions">${suggestions.map((text, index) => `<button type="button" data-prompt="${index}">${esc(text)} ${icon("arrow")}</button>`).join("")}</div><p class="chat-status" role="status"></p><form class="chat-composer"><label class="sr-chat" for="chat-input">Mesajınız</label><textarea id="chat-input" rows="2" maxlength="1000" required placeholder="${esc(placeholder)}"></textarea><button type="submit" aria-label="Mesajı göndər">${icon("arrow")}</button><small>${esc(footnote)}</small></form></div>`;
   const log = root.querySelector(".chat-log");
   const form = root.querySelector("form");
   const input = root.querySelector("textarea");
   const status = root.querySelector(".chat-status");
   function render() {
     log.innerHTML =
-      `<article class="chat-message assistant"><span class="chat-avatar">${brandMark}</span><div><span class="chat-author">NOIR AI</span><p>${esc(welcome)}</p></div></article>` +
+      `<article class="chat-message assistant"><span class="chat-avatar">${brandMark}</span><div><span class="chat-author">${esc(agentName)}</span><p>${esc(welcome)}</p></div></article>` +
       messages
         .map(
           (message, index) =>
-            `<article class="chat-message ${message.role}">${message.role === "assistant" ? `<span class="chat-avatar">${brandMark}</span>` : ""}<div><span class="chat-author">${message.role === "user" ? "Sən" : "NOIR AI"}</span><p>${esc(message.text)}</p>${message.films?.length ? `<div class="chat-films">${message.films.map((film, filmIndex) => `<button type="button" class="chat-film" data-message="${index}" data-choice="${filmIndex}">${film.poster ? `<img src="${esc(film.poster)}" alt="" loading="lazy">` : `<span class="chat-poster-placeholder">${brandMark}</span>`}<span><strong>${esc(film.title)}</strong><small>${esc(film.year || "")} ${film.genre ? `· ${esc(film.genre)}` : ""}</small>${film.reason ? `<span class="chat-reason">${esc(film.reason)}</span>` : ""}</span>${icon("arrow")}</button>`).join("")}</div>` : ""}</div></article>`,
+            `<article class="chat-message ${message.role}">${message.role === "assistant" ? `<span class="chat-avatar">${brandMark}</span>` : ""}<div><span class="chat-author">${message.role === "user" ? "Sən" : esc(agentName)}</span><p>${esc(message.text)}</p>${message.films?.length ? `<div class="chat-films">${message.films.map((film, filmIndex) => `<button type="button" class="chat-film" data-message="${index}" data-choice="${filmIndex}">${film.poster ? `<img src="${esc(film.poster)}" alt="" loading="lazy">` : `<span class="chat-poster-placeholder">${brandMark}</span>`}<span><strong>${esc(film.title)}</strong><small>${esc(film.year || "")} ${film.genre ? `· ${esc(film.genre)}` : ""}</small>${film.reason ? `<span class="chat-reason">${esc(film.reason)}</span>` : ""}</span>${icon("arrow")}</button>`).join("")}</div>` : ""}</div></article>`,
         )
         .join("");
     log.querySelectorAll("img").forEach((img) => {
@@ -56,7 +59,7 @@ export function mountChat(
   async function run(action) {
     if (busy || !root.isConnected) return;
     busy = true;
-    status.textContent = "NOIR AI düşünür…";
+    status.textContent = busyText;
     root.setAttribute("aria-busy", "true");
     root
       .querySelectorAll("button")
@@ -72,7 +75,7 @@ export function mountChat(
         root
           .querySelectorAll("button")
           .forEach((button) => (button.disabled = false));
-        if (status.textContent === "NOIR AI düşünür…") status.textContent = "";
+        if (status.textContent === busyText) status.textContent = "";
       }
     }
   }

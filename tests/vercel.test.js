@@ -21,6 +21,7 @@ test("Vercel uses an explicit API rewrite and the deployed function exists", asy
     await readFile(new URL("../vercel.json", import.meta.url), "utf8"),
   );
   assert.deepEqual(config.rewrites, [
+    { source: "/admin", destination: "/admin.html" },
     { source: "/api/:path*", destination: "/api?__noir_route=:path*" },
   ]);
   assert.ok(config.functions["api/index.js"]);

@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { gsap } from "gsap";
 import { drawBrandMark } from "./brand.js";
+import { createPosterCache, posterSource } from "./poster-cache.js";
 
 export function createRoom(canvas, callbacks) {
   const {
@@ -138,9 +139,35 @@ export function createRoom(canvas, callbacks) {
   const glow = new THREE.PointLight("#7a2533", 16, 26);
   glow.position.set(0, 1, 7);
   scene.add(glow);
-  const loader = new THREE.TextureLoader(),
-    textures = new Map(),
-    pending = new Set();
+  const loader = new THREE.TextureLoader();
+  const posters = createPosterCache({
+    load: (url) =>
+      new Promise((resolve, reject) =>
+        loader.load(
+          url,
+          (texture) => {
+            texture.colorSpace = THREE.SRGBColorSpace;
+            texture.anisotropy = 2;
+            resolve(texture);
+          },
+          undefined,
+          reject,
+        ),
+      ),
+    apply: (object, texture) => {
+      const face = object.userData.coverMaterial,
+        previous = face.map;
+      if (previous === texture) return;
+      face.map = texture;
+      face.needsUpdate = true;
+      if (previous && !posters.owns(previous)) previous.dispose();
+      dirty = true;
+    },
+    dispose: (texture) => texture.dispose(),
+    isLive: (object) => object.userData.live,
+    isInUse: (texture) =>
+      objects.some((object) => object.userData.coverMaterial.map === texture),
+  });
   function titleTexture(f, spine = false) {
     const c = document.createElement("canvas");
     c.width = spine ? 128 : 384;
@@ -190,50 +217,9 @@ export function createRoom(canvas, callbacks) {
     return texture;
   }
   function loadPoster(object) {
-    const f = object.userData.film,
-      face = object.userData.coverMaterial;
-    if (!f.poster || pending.has(f.poster)) return;
-    if (textures.has(f.poster)) {
-      if (face.map !== textures.get(f.poster)) {
-        face.map?.dispose();
-        face.map = textures.get(f.poster);
-        face.needsUpdate = true;
-      }
-      return;
-    }
-    pending.add(f.poster);
-    loader.load(
-      f.poster,
-      (t) => {
-        pending.delete(f.poster);
-        t.colorSpace = THREE.SRGBColorSpace;
-        t.anisotropy = 2;
-        textures.set(f.poster, t);
-        // Bound GPU memory when browsing hundreds of covers.
-        if (textures.size > 24) {
-          const key = textures.keys().next().value;
-          if (key !== f.poster) {
-            const evicted = textures.get(key);
-            for (const item of objects) {
-              const mat = item.userData.coverMaterial;
-              if (mat.map === evicted) {
-                mat.map = titleTexture(item.userData.film);
-                mat.needsUpdate = true;
-              }
-            }
-            evicted.dispose();
-            textures.delete(key);
-          }
-        }
-        if (object.userData.live) {
-          face.map?.dispose();
-          face.map = t;
-          face.needsUpdate = true;
-        }
-        dirty = true;
-      },
-      undefined,
-      () => pending.delete(f.poster),
+    posters.request(
+      posterSource(object.userData.film.poster, mobile()),
+      object,
     );
   }
   function makeCase(f, index, count) {
@@ -250,11 +236,11 @@ export function createRoom(canvas, callbacks) {
       col = slot % columns;
     const g = new THREE.Group();
     g.position.set(
-      (col - (columns - 1) / 2) * (count <= 12 ? 4.6 : 1.8),
+      (col - (columns - 1) / 2) * (count <= 12 ? 4.6 : 1.95),
       4.3 - row * 3.4,
       0.6,
     );
-    g.rotation.y = Math.PI * 0.37;
+    g.rotation.y = 0;
     g.userData = {
       film: f,
       live: true,
@@ -335,7 +321,7 @@ export function createRoom(canvas, callbacks) {
       });
       geometries.forEach((g) => g.dispose());
       materials.forEach((m) => {
-        if (m.map && ![...textures.values()].includes(m.map)) m.map.dispose();
+        if (m.map && !posters.owns(m.map)) m.map.dispose();
         m.dispose();
       });
     }
@@ -352,8 +338,8 @@ export function createRoom(canvas, callbacks) {
     disposeCases();
     const slice = films.slice(section * 108, (section + 1) * 108);
     slice.forEach((f, i) => makeCase(f, i, slice.length));
-    // Load only a handful of covers up front; spines have local title textures.
-    objects.slice(0, 12).forEach(loadPoster);
+    // Every cover in this section gets a poster, with four concurrent loads.
+    objects.forEach(loadPoster);
     onSection(section + 1, Math.max(1, Math.ceil(films.length / 108)));
     dirty = true;
   }

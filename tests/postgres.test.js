@@ -107,6 +107,22 @@ test("PostgreSQL migration, CRUD, shelves, rate limits and resumable TOP 500 imp
       second = await repo.saveFilm({ ...input, title: "İkinci film" });
     assert.equal((await repo.catalog()).films.length, 2);
     assert.equal(
+      (
+        await repo.fillMissingPlot(
+          first.id,
+          "Azərbaycan dilində süjet.",
+          "ai-translated",
+        )
+      ).plot,
+      "Azərbaycan dilində süjet.",
+    );
+    assert.equal(
+      (await repo.fillMissingPlot(first.id, "Başqa tərcümə.", "ai-translated"))
+        .plot,
+      "Azərbaycan dilində süjet.",
+      "existing descriptions must not be overwritten",
+    );
+    assert.equal(
       (await repo.getFilm(first.id)).title,
       input.title,
       "parameterized input remains plain data",

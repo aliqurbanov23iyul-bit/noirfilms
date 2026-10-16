@@ -1,4 +1,5 @@
 import { HttpError } from "./http.js";
+import { generateGemini } from "./gemini.js";
 
 export function aiConfigured() {
   return Boolean(process.env.GEMINI_API_KEY);
@@ -46,32 +47,7 @@ export async function modelJSON(instructions, input, name, schema) {
       503,
       "NOIR AI üçün Gemini server açarı hələ əlavə edilməyib.",
     );
-  const model = process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
-  let response;
-  try {
-    response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
-      {
-        method: "POST",
-        headers: {
-          "x-goog-api-key": process.env.GEMINI_API_KEY,
-          "Content-Type": "application/json",
-        },
-        signal: AbortSignal.timeout(30_000),
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: instructions }] },
-          contents: [{ role: "user", parts: [{ text: input }] }],
-          generationConfig: {
-            responseMimeType: "application/json",
-            responseJsonSchema: schema,
-            maxOutputTokens: 4096,
-          },
-        }),
-      },
-    );
-  } catch {
-    throw new HttpError(502, "Gemini bağlantısı alınmadı. Yenidən cəhd edin.");
-  }
+  const response = await generateGemini(instructions, input, name, schema);
   if (!response.ok)
     console.warn(
       "NOIR_AI_REQUEST_FAILED",
@@ -91,14 +67,16 @@ export async function modelJSON(instructions, input, name, schema) {
   }
   if (!response.ok)
     throw new HttpError(
-      502,
+      response.status === 503 ? 503 : 502,
       [401, 403].includes(response.status)
         ? "Gemini açarı və ya giriş icazəsi qəbul edilmədi. Server açarını yoxlayın."
         : response.status === 404
           ? "Seçilmiş Gemini modeli bu hesab üçün əlçatan deyil. Model ayarını yoxlayın."
           : response.status === 400
-            ? "Gemini sorğusunun parametrləri qəbul edilmədi (HTTP 400). İmportu AI tərcüməsi olmadan davam etdirə bilərsiniz."
-            : `Gemini xidməti cavab vermədi (HTTP ${response.status}). Sonra yenidən cəhd edin.`,
+            ? "Gemini sorğusunun parametrləri qəbul edilmədi (HTTP 400). Server konfiqurasiyası yoxlanmalıdır."
+            : response.status === 503
+              ? "Gemini hazırda yüklənib (503). Təkrar cəhdlər də nəticə vermədi. Bir qədər sonra yenidən yoxlayın; film əlavə etmək üçün TMDB axtarışı işləyir."
+              : `Gemini xidməti cavab vermədi (HTTP ${response.status}). Sonra yenidən cəhd edin.`,
     );
   try {
     const data = await response.json();

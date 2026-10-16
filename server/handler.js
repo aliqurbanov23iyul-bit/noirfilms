@@ -17,8 +17,9 @@ import {
 import { database, rateLimit, audit } from "./db.js";
 import * as repo from "./repository.js";
 import { searchTMDB, movieTMDB } from "./tmdb.js";
-import { parseCommand, modelJSON, aiConfigured } from "./ai.js";
+import { modelJSON, aiConfigured } from "./ai.js";
 import { publicAI, chatInput, recommendChat } from "./chat.js";
+import { adminConversation } from "./admin-assistant.js";
 import { startImport, importStep, importStatus } from "./importer.js";
 
 export async function handler(req, res) {
@@ -120,42 +121,67 @@ export async function handler(req, res) {
         });
       if (path === "/api/admin/tmdb/add" && method === "POST") {
         await rateLimit(`tmdb-add:${current.username}`, 30, 3600);
-        const film = await movieTMDB(b.tmdbId);
+        const film = await movieTMDB(b.tmdbId, {
+          translate: b.translate === true,
+        });
         const result = await repo.upsertTMDB(film);
         await audit(current.username, "film.tmdb-add", result.id);
         return json(res, 200, { film: result });
       }
       if (path === "/api/admin/assistant" && method === "POST") {
-        await rateLimit(`assistant:${current.username}`, 30, 3600);
-        const intent = await parseCommand(text(b.command, "Əmr", 500));
-        if (intent.action !== "add_film" || !intent.title)
+        await rateLimit(`assistant:${current.username}`, 60, 3600);
+        const input = chatInput({ message: b.command, history: b.history });
+        const { films } = await repo.catalog();
+        const reply = await adminConversation(input, films);
+        const results = reply.searchTitle
+          ? await searchTMDB(text(reply.searchTitle, "Film adı"), reply.year)
+          : [];
+        return json(res, 200, {
+          message:
+            reply.text +
+            (reply.searchTitle && !results.length
+              ? " TMDB-də uyğun film tapılmadı."
+              : ""),
+          results,
+        });
+      }
+      if (path === "/api/admin/ai/check" && method === "POST") {
+        await rateLimit(`ai-check:${current.username}`, 5, 600);
+        const reply = await modelJSON(
+          "Azərbaycan dilində qısa salam yaz.",
+          "Bağlantı sınağı",
+          "health_check",
+          {
+            type: "object",
+            additionalProperties: false,
+            properties: { text: { type: "string" } },
+            required: ["text"],
+          },
+        );
+        return json(res, 200, { ok: true, text: reply.text });
+      }
+      if (path === "/api/admin/translate" && method === "POST") {
+        await rateLimit(`translate:${current.username}`, 30, 60);
+        const film = await repo.getFilm(identifier(b.id));
+        if (film.plot?.trim()) return json(res, 200, { film, skipped: true });
+        if (!film.tmdbId)
           throw new HttpError(
             422,
-            "Hazırda yalnız film əlavə etmək əmrləri dəstəklənir.",
+            "Bu film üçün süjeti redaktə bölməsində Azərbaycan dilində yazın.",
           );
-        const results = await searchTMDB(intent.title, intent.year);
-        if (!results.length)
-          throw new HttpError(404, "TMDB-də uyğun film tapılmadı.");
-        const normalize = (s) =>
-          s.toLocaleLowerCase("az").replace(/[^\p{L}\p{N}]/gu, "");
-        const exact = results.filter(
-          (f) =>
-            normalize(f.title) === normalize(intent.title) &&
-            (!intent.year || f.year === intent.year),
+        const source = await movieTMDB(film.tmdbId, { translate: true });
+        if (!source.plot?.trim())
+          throw new HttpError(
+            503,
+            "Azərbaycan dilində süjet alınmadı. Gemini bağlantısını yoxlayın və ya mətni redaktə bölməsində yazın.",
+          );
+        const result = await repo.fillMissingPlot(
+          film.id,
+          source.plot,
+          source.translationStatus,
         );
-        if (exact.length !== 1)
-          return json(res, 200, {
-            needsSelection: true,
-            results,
-            message: "Bir neçə uyğun nəticə var. Əlavə ediləcək filmi seçin.",
-          });
-        const film = await movieTMDB(exact[0].tmdbId),
-          result = await repo.upsertTMDB(film);
-        await audit(current.username, "film.ai-add", result.id);
-        return json(res, 200, {
-          film: result,
-          message: `${result.title} bazaya əlavə edildi.`,
-        });
+        await audit(current.username, "film.translate", film.id);
+        return json(res, 200, { film: result });
       }
       if (path === "/api/admin/import" && method === "GET")
         return json(res, 200, { job: await importStatus() });

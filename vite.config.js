@@ -16,6 +16,7 @@ export default defineConfig(({ mode }) => {
     plugins: [api],
     build: {
       rollupOptions: {
+        input: { main: "index.html", admin: "admin.html" },
         output: { manualChunks: { three: ["three"], animation: ["gsap"] } },
       },
     },

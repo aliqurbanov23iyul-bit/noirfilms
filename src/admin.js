@@ -6,7 +6,8 @@ import { brandLogo } from "./brand.js";
 export function createAdmin({ modal, toast, esc, onCatalog, getDemoAdmin }) {
   let authenticated = false,
     job = null,
-    importRunning = false;
+    importRunning = false,
+    assistantMessages = [];
   const $ = (s) => document.querySelector(s);
   const showError = (error) => {
     const e = $("#admin-message");
@@ -39,13 +40,17 @@ export function createAdmin({ modal, toast, esc, onCatalog, getDemoAdmin }) {
   }
   async function open() {
     await loadCapabilities();
-    if (!capabilities.runtime || !capabilities.database || !capabilities.auth)
+    if (!capabilities.runtime || !capabilities.database || !capabilities.auth) {
+      authenticated = false;
       return setup();
+    }
     try {
       const current = await request("/api/auth/session");
       setCSRF(current.csrf);
       authenticated = true;
     } catch {
+      authenticated = false;
+      setCSRF("");
       loginForm();
       return;
     }
@@ -103,6 +108,16 @@ export function createAdmin({ modal, toast, esc, onCatalog, getDemoAdmin }) {
     $("#manage-shelves").onclick = () => shelfManager(shelves);
     $("#assistant-tab").onclick = assistant;
     $("#import-tab").onclick = importView;
+    const searchButton = document.createElement("button");
+    searchButton.className = "button";
+    searchButton.textContent = "TMDB-də film axtar";
+    searchButton.onclick = searchView;
+    $(".admin-tabs").append(searchButton);
+    const translationButton = document.createElement("button");
+    translationButton.className = "button";
+    translationButton.textContent = "Azərbaycan dilində süjetlər";
+    translationButton.onclick = translationsView;
+    $(".admin-tabs").append(translationButton);
     $("#logout").onclick = (e) =>
       operation(e.currentTarget, async () => {
         await request("/api/auth/logout", { method: "POST", data: {} });
@@ -278,20 +293,23 @@ export function createAdmin({ modal, toast, esc, onCatalog, getDemoAdmin }) {
     $("#back-dashboard").onclick = dashboard;
     mountChat($("#admin-chat-root"), {
       esc,
+      messages: assistantMessages,
       welcome:
-        "Hansı filmi kolleksiyaya əlavə edək? Adını və varsa ilini yaz. Dəqiq uyğunluq tapanda TMDB məlumatları ilə bazaya əlavə edəcəyəm. Bir neçə nəticə varsa, seçim sənindir.",
-      context: "Admin rejimi · Film əlavə etmək səlahiyyəti var",
+        "Kolleksiyanı birlikdə quraq. Filmlər barədə danışa, məsləhət istəyə və əlavə etmək istədiyin filmi axtara bilərsən. Film yalnız nəticə kartını seçəndə bazaya əlavə olunur.",
+      context: "Admin studiyası · Kino söhbəti və film seçimi",
       suggestions: [
         "Interstellar filmini əlavə et",
         "The Godfather (1972) filmini əlavə et",
       ],
       placeholder: "Film əlavə etmək üçün yaz…",
-      async send(command) {
-        if (!capabilities.ai || !capabilities.tmdb)
-          throw Error("Gemini və TMDB server açarları əlavə edilməlidir.");
+      async send(command, history) {
+        if (!capabilities.ai)
+          throw Error(
+            "Gemini server açarı əlavə edilməlidir. TMDB axtarışı ilə AI olmadan film əlavə edə bilərsiniz.",
+          );
         const data = await request("/api/admin/assistant", {
           method: "POST",
-          data: { command },
+          data: { command, history },
         });
         if (data.film) {
           await refresh();
@@ -301,7 +319,7 @@ export function createAdmin({ modal, toast, esc, onCatalog, getDemoAdmin }) {
         }
         return {
           text: data.message,
-          films: data.results.map((film) => ({
+          films: (data.results || []).map((film) => ({
             ...film,
             id: String(film.tmdbId),
             reason: "Kolleksiyaya əlavə etmək üçün seç",
@@ -317,6 +335,103 @@ export function createAdmin({ modal, toast, esc, onCatalog, getDemoAdmin }) {
         return { text: `${result.film.title} bazaya əlavə edildi.` };
       },
     });
+    const tools = document.createElement("div");
+    tools.className = "admin-actions";
+    tools.innerHTML =
+      '<button class="button" id="check-gemini">Gemini bağlantısını yoxla</button><button class="button" id="tmdb-without-ai">AI olmadan film əlavə et</button><p id="admin-message" role="status"></p>';
+    $("#admin-chat-root").after(tools);
+    $("#tmdb-without-ai").onclick = searchView;
+    $("#check-gemini").onclick = (event) =>
+      operation(event.currentTarget, async () => {
+        $("#admin-message").textContent =
+          "Gemini yoxlanılır. Bu, 42 saniyəyədək çəkə bilər…";
+        const response = await request("/api/admin/ai/check", {
+          method: "POST",
+          data: {},
+        });
+        if ($("#check-gemini"))
+          $("#admin-message").textContent =
+            `Bağlantı işləyir. ${response.text}`;
+      });
+  }
+  function searchView() {
+    modal(
+      '<div class="eyebrow">TMDB · AI TƏLƏB ETMİR</div><h2>Kolleksiyaya film əlavə et</h2><p class="body-copy secondary">Filmi adı ilə tap, sonra posterli nəticəni seç. Süjeti ayrıca Azərbaycan dilinə çevirə və ya özün yaza bilərsən.</p><div id="tmdb-search-root"></div><p id="admin-message" role="status"></p><button class="text-button" id="back-dashboard">← İdarəetməyə qayıt</button>',
+      "ai-chat-panel",
+    );
+    $("#back-dashboard").onclick = dashboard;
+    mountChat($("#tmdb-search-root"), {
+      agentName: "TMDB",
+      footnote: "TMDB məlumatları · Seçdiyiniz film bazaya əlavə olunur.",
+      busyText: "TMDB sorğusu işlənir…",
+      esc,
+      welcome: "Əlavə etmək istədiyin filmin adını yaz.",
+      context: "Birbaşa TMDB axtarışı · Film kartını seçərək əlavə et",
+      suggestions: ["Interstellar", "The Godfather", "Arrival"],
+      placeholder: "Film adı…",
+      async send(title) {
+        const result = await request("/api/admin/tmdb/search", {
+          method: "POST",
+          data: { title },
+        });
+        return {
+          text: result.results.length
+            ? "Əlavə etmək istədiyin filmi seç."
+            : "Uyğun film tapılmadı.",
+          films: result.results.map((film) => ({
+            ...film,
+            id: String(film.tmdbId),
+            reason: "Bazaya əlavə et",
+          })),
+        };
+      },
+      async choose(film) {
+        const result = await request("/api/admin/tmdb/add", {
+          method: "POST",
+          data: { tmdbId: film.tmdbId, translate: false },
+        });
+        await refresh();
+        return {
+          text: `${result.film.title} bazaya əlavə edildi. Süjeti Azərbaycan dilində süjetlər bölməsində tamamlaya bilərsiniz.`,
+        };
+      },
+    });
+  }
+  async function translationsView() {
+    const { films } = await refresh();
+    const missing = films.filter((film) => !film.plot?.trim() && film.tmdbId);
+    modal(
+      `<div class="eyebrow">AZƏRBAYCAN DİLİNDƏ SÜJETLƏR</div><h2>Hər filmin öz hekayəsi.</h2><p class="body-copy">${missing.length} filmin süjeti tərcümə gözləyir. Hazır mətnlər və redaktorun yazdığı açıqlamalar dəyişdirilmir.</p><div class="admin-actions"><button class="button primary" id="translate-plots" ${!missing.length ? "disabled" : ""}>Çatışmayan süjetləri tamamla</button><button class="button" id="stop-translations">Dayandır</button><button class="button" id="back-dashboard">Geri</button></div><p id="translation-progress" role="status"></p><p id="admin-message" role="status"></p><p class="body-copy secondary">Gemini əlçatmaz olarsa proses saxlanır. Kolleksiya bölməsində Redaktə seçərək açıqlamanı özünüz də Azərbaycan dilində yaza bilərsiniz.</p>`,
+    );
+    const progress = $("#translation-progress");
+    let stop = false;
+    $("#stop-translations").onclick = () => {
+      stop = true;
+      progress.textContent = "Cari filmdən sonra dayanacaq.";
+    };
+    $("#back-dashboard").onclick = () => {
+      stop = true;
+      dashboard();
+    };
+    $("#translate-plots").onclick = (event) =>
+      operation(event.currentTarget, async () => {
+        stop = false;
+        let done = 0;
+        for (const film of missing) {
+          if (stop || !progress.isConnected) break;
+          progress.textContent = `${done} / ${missing.length} · ${film.title} tərcümə edilir…`;
+          await request("/api/admin/translate", {
+            method: "POST",
+            data: { id: film.id },
+          });
+          done++;
+          if (progress.isConnected)
+            progress.textContent = `${done} / ${missing.length} süjet tamamlandı.`;
+          if (done < missing.length && !stop)
+            await new Promise((resolve) => setTimeout(resolve, 2500));
+        }
+        await refresh();
+      });
   }
   function importView() {
     let stopped = false;
@@ -401,5 +516,15 @@ export function createAdmin({ modal, toast, esc, onCatalog, getDemoAdmin }) {
       });
     };
   }
-  return { open };
+  async function openSection(view) {
+    await open();
+    if (authenticated) await view();
+  }
+  return {
+    open,
+    openAssistant: () => openSection(assistant),
+    openSearch: () => openSection(searchView),
+    openTranslations: () => openSection(translationsView),
+    openImport: () => openSection(importView),
+  };
 }
