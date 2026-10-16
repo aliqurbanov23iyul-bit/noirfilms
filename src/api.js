@@ -26,7 +26,13 @@ export async function request(path, { method = "GET", data } = {}) {
   try {
     result = await response.json();
   } catch {
-    throw new Error("Bu nəşrdə Vercel server funksiyaları aktiv deyil.");
+    if (response.status === 404)
+      throw new Error(
+        "Server sorğusunun ünvanı tapılmadı. Saytın API yönləndirməsi yoxlanmalıdır.",
+      );
+    throw new Error(
+      "Serverdən gözlənilən cavab alınmadı. Bir qədər sonra yenidən cəhd edin.",
+    );
   }
   if (!response.ok)
     throw new Error(result.message || "Əməliyyat tamamlanmadı.");
