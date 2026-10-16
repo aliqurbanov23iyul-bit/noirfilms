@@ -71,3 +71,53 @@ test("missing TMDB token makes no external call", async () => {
     if (old !== undefined) process.env.TMDB_READ_ACCESS_TOKEN = old;
   }
 });
+
+test("import tolerates invalid translations but preserves quota failures and canonical metadata", async (t) => {
+  const names = ["TMDB_READ_ACCESS_TOKEN", "GEMINI_API_KEY"];
+  const old = Object.fromEntries(
+    names.map((name) => [name, process.env[name]]),
+  );
+  process.env.TMDB_READ_ACCESS_TOKEN = "fixture-tmdb";
+  process.env.GEMINI_API_KEY = "fixture-gemini";
+  t.after(() => {
+    for (const name of names) {
+      if (old[name] === undefined) delete process.env[name];
+      else process.env[name] = old[name];
+    }
+  });
+  let quota = false;
+  t.mock.method(globalThis, "fetch", async (url) => {
+    if (String(url).includes("generativelanguage.googleapis.com"))
+      return quota
+        ? new Response("quota", { status: 429 })
+        : Response.json({
+            candidates: [
+              {
+                finishReason: "STOP",
+                content: { parts: [{ text: '{"plot":42}' }] },
+              },
+            ],
+          });
+    return Response.json({
+      id: 42,
+      original_title: "Fixture film",
+      release_date: "2000-01-01",
+      overview: "Source plot",
+      vote_average: 8,
+      genres: [{ id: 18 }],
+    });
+  });
+  await assert.rejects(
+    movieTMDB(42),
+    (error) => error.code === "AI_INVALID_OUTPUT",
+  );
+  const film = await movieTMDB(42, { tolerateInvalidTranslation: true });
+  assert.equal(film.tmdbId, 42);
+  assert.equal(film.plot, "");
+  assert.equal(film.translationStatus, "missing");
+  quota = true;
+  await assert.rejects(
+    movieTMDB(42, { tolerateInvalidTranslation: true }),
+    (error) => error.status === 429,
+  );
+});

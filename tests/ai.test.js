@@ -135,6 +135,26 @@ test("Gemini rejects truncated, malformed and schema-invalid responses without l
   );
 });
 
+test("Gemini quota errors preserve Retry-After without exposing provider response bodies", async (t) => {
+  setup(t);
+  t.mock.method(
+    globalThis,
+    "fetch",
+    async () =>
+      new Response("private-provider-details", {
+        status: 429,
+        headers: { "retry-after": "75" },
+      }),
+  );
+  await assert.rejects(
+    parseCommand("Film əlavə et"),
+    (error) =>
+      error.status === 429 &&
+      error.retryAfter === 75 &&
+      !error.message.includes("private"),
+  );
+});
+
 test("public chat rejects invalid history and excessive text", () => {
   assert.throws(() =>
     chatInput({ message: "x", history: [{ role: "system", text: "admin" }] }),

@@ -37,11 +37,18 @@ export async function rateLimit(key, limit, seconds) {
     VALUES (${key}, ${bucket}, 1, now() + (${seconds} * interval '1 second'))
     ON CONFLICT (key, bucket) DO UPDATE SET hits = noir_rate_limits.hits + 1
     RETURNING hits`;
-  if (result.hits > limit)
-    throw new HttpError(
-      429,
-      "Sorğu limiti dolub. Bir qədər sonra yenidən cəhd edin.",
+  if (result.hits > limit) {
+    const remaining = Math.max(
+      1,
+      Math.ceil((bucket + 1) * seconds - Date.now() / 1000),
     );
+    const error = new HttpError(
+      429,
+      `Sorğu limiti dolub. Təxminən ${remaining} saniyə sonra davam edə bilərsiniz.`,
+    );
+    error.retryAfter = remaining;
+    throw error;
+  }
 }
 
 export async function audit(actor, action, recordId) {

@@ -57,19 +57,20 @@ export async function searchTMDB(title, year) {
     language: "en-US",
     ...(year ? { year } : {}),
   });
-  return (data.results || [])
-    .slice(0, 6)
-    .map((f) => ({
-      tmdbId: f.id,
-      title: f.original_title || f.title,
-      year: Number(f.release_date?.slice(0, 4)) || null,
-      poster: f.poster_path
-        ? `https://image.tmdb.org/t/p/w342${f.poster_path}`
-        : "",
-      rating: f.vote_average,
-    }));
+  return (data.results || []).slice(0, 6).map((f) => ({
+    tmdbId: f.id,
+    title: f.original_title || f.title,
+    year: Number(f.release_date?.slice(0, 4)) || null,
+    poster: f.poster_path
+      ? `https://image.tmdb.org/t/p/w342${f.poster_path}`
+      : "",
+    rating: f.vote_average,
+  }));
 }
-export async function movieTMDB(id) {
+export async function movieTMDB(
+  id,
+  { tolerateInvalidTranslation = false } = {},
+) {
   if (!Number.isSafeInteger(Number(id)) || Number(id) < 1)
     throw new HttpError(400, "TMDB identifikatoru yanlışdır.");
   const f = await tmdb(`movie/${Number(id)}`, {
@@ -81,8 +82,15 @@ export async function movieTMDB(id) {
   let plot = az || "",
     translationStatus = az ? "tmdb-az" : "missing";
   if (!plot && f.overview && aiConfigured()) {
-    plot = await translatePlot(f.overview);
-    translationStatus = "ai-translated";
+    try {
+      plot = await translatePlot(f.overview);
+      translationStatus = "ai-translated";
+    } catch (error) {
+      // Invalid text must not block the remaining films. Provider quota and
+      // credential errors still pause the import rather than hammering Gemini.
+      if (!tolerateInvalidTranslation || error.code !== "AI_INVALID_OUTPUT")
+        throw error;
+    }
   }
   const video =
     f.videos?.results?.find(

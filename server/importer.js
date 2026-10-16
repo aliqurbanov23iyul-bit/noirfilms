@@ -4,11 +4,13 @@ import { HttpError } from "./http.js";
 import { tmdb, movieTMDB } from "./tmdb.js";
 import { upsertTMDB } from "./repository.js";
 
-export async function startImport() {
+export async function startImport(beforeCreate = async () => {}) {
   const sql = database();
   const [pending] =
     await sql`SELECT id,cursor,total,status,created_at FROM noir_imports WHERE status='running' ORDER BY created_at DESC LIMIT 1`;
   if (pending) return pending;
+  // Resuming a frozen manifest must not consume the new-import hourly quota.
+  await beforeCreate();
   const ids = [];
   // The ranking is frozen before any film is imported. No synthetic entries.
   for (let page = 1; ids.length < 500 && page <= 30; page++) {
@@ -43,7 +45,9 @@ export async function importStep(id) {
   try {
     const tmdbId = job.manifest[job.cursor];
     if (tmdbId) {
-      const film = await movieTMDB(tmdbId);
+      const film = await movieTMDB(tmdbId, {
+        tolerateInvalidTranslation: true,
+      });
       const shelfIndex = Math.floor(job.cursor / 25) + 1;
       const shelfId = `top-${String(shelfIndex).padStart(2, "0")}`;
       await sql`INSERT INTO shelves(id,name,position) VALUES(${shelfId},${`TOP 500 · ${String(shelfIndex).padStart(2, "0")}`},${shelfIndex}) ON CONFLICT(id) DO NOTHING`;
@@ -51,7 +55,7 @@ export async function importStep(id) {
     }
     const cursor = job.cursor + (tmdbId ? 1 : 0);
     const [count] =
-      await sql`SELECT count(*)::int AS count FROM films WHERE top_snapshot=${job.id}`;
+      await sql`SELECT count(*)::int AS count, count(*) FILTER (WHERE translation_status='missing')::int AS untranslated FROM films WHERE top_snapshot=${job.id}`;
     const complete = cursor === 500 && count.count === 500;
     const [result] =
       await sql`UPDATE noir_imports SET cursor=${cursor},status=${complete ? "complete" : cursor === 500 ? "incomplete" : "running"},error=NULL,
@@ -61,7 +65,11 @@ export async function importStep(id) {
         409,
         "Bəzi import filmləri silinib. Tam 500 film təsdiqlənmədi.",
       );
-    return { ...result, imported: count.count };
+    return {
+      ...result,
+      imported: count.count,
+      untranslated: count.untranslated,
+    };
   } catch (error) {
     await sql`UPDATE noir_imports SET leased_until=NULL,error='Film alınmadı; davam etmək üçün yenidən cəhd edin.',updated_at=now() WHERE id=${id}`;
     throw error;
@@ -73,10 +81,11 @@ export async function importStatus() {
     await sql`SELECT id,cursor,total,status,error,created_at FROM noir_imports ORDER BY created_at DESC LIMIT 1`;
   if (!job) return null;
   const [count] =
-    await sql`SELECT count(*)::int AS count FROM films WHERE top_snapshot=${job.id}`;
+    await sql`SELECT count(*)::int AS count, count(*) FILTER (WHERE translation_status='missing')::int AS untranslated FROM films WHERE top_snapshot=${job.id}`;
   return {
     ...job,
     imported: count.count,
+    untranslated: count.untranslated,
     status:
       job.status === "complete" && count.count !== 500
         ? "incomplete"

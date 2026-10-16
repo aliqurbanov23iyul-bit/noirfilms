@@ -51,8 +51,20 @@ test("PostgreSQL migration, CRUD, shelves, rate limits and resumable TOP 500 imp
     }
     return Response.json(format(await db.query(payload.query, payload.params)));
   };
+  let aiQuota = false;
   globalThis.fetch = async (url) => {
     const path = new URL(url);
+    if (path.hostname === "generativelanguage.googleapis.com")
+      return aiQuota
+        ? new Response("Quota", { status: 429 })
+        : Response.json({
+            candidates: [
+              {
+                finishReason: "MAX_TOKENS",
+                content: { parts: [{ text: '{"plot":' }] },
+              },
+            ],
+          });
     if (path.pathname.endsWith("top_rated")) {
       const page = Number(path.searchParams.get("page"));
       return Response.json({
@@ -69,7 +81,7 @@ test("PostgreSQL migration, CRUD, shelves, rate limits and resumable TOP 500 imp
       genres: [{ id: 18 }],
       vote_average: 8,
       poster_path: "/fixture.jpg",
-      overview: "",
+      overview: "Source plot",
       credits: { crew: [], cast: [] },
       videos: { results: [] },
       translations: { translations: [] },
@@ -111,19 +123,41 @@ test("PostgreSQL migration, CRUD, shelves, rate limits and resumable TOP 500 imp
     await rateLimit("test-bucket", 2, 60);
     await assert.rejects(
       rateLimit("test-bucket", 2, 60),
-      (e) => e.status === 429,
+      (e) => e.status === 429 && e.retryAfter > 0 && e.retryAfter <= 60,
     );
-    const job = await startImport();
+    let manifestStarts = 0;
+    const job = await startImport(async () => {
+      manifestStarts++;
+    });
     assert.equal(job.total, 500);
     assert.equal(
-      (await startImport()).id,
+      (
+        await startImport(async () => {
+          throw Error("Resume must not consume a new-import quota");
+        })
+      ).id,
       job.id,
       "a running import resumes its frozen manifest",
     );
+    assert.equal(manifestStarts, 1);
+    process.env.GEMINI_API_KEY = "fixture-only";
+    aiQuota = true;
+    await assert.rejects(importStep(job.id), (error) => error.status === 429);
+    assert.equal(
+      (await importStatus()).cursor,
+      0,
+      "quota failure must not advance the manifest",
+    );
+    aiQuota = false;
     const progress = await importStep(job.id);
+    delete process.env.GEMINI_API_KEY;
     assert.equal(progress.cursor, 1);
     assert.equal(progress.imported, 1);
+    assert.equal(progress.untranslated, 1);
+    assert.equal((await importStatus()).untranslated, 1);
     const imported = (await repo.catalog()).films[0];
+    assert.equal(imported.plot, "");
+    assert.equal(imported.translationStatus, "missing");
     await repo.upsertTMDB({
       ...imported,
       tmdbId: 1,

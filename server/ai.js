@@ -46,7 +46,7 @@ export async function modelJSON(instructions, input, name, schema) {
       503,
       "NOIR AI üçün Gemini server açarı hələ əlavə edilməyib.",
     );
-  const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+  const model = process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
   let response;
   try {
     response = await fetch(
@@ -72,10 +72,26 @@ export async function modelJSON(instructions, input, name, schema) {
   } catch {
     throw new HttpError(502, "Gemini bağlantısı alınmadı. Yenidən cəhd edin.");
   }
+  if (response.status === 429) {
+    const seconds = Number(response.headers.get("retry-after"));
+    const error = new HttpError(
+      429,
+      "Gemini sorğu limiti dolub. İmport saxlanılıb; bir qədər sonra davam edin. Gündəlik kvota bitibsə, Gemini hesabınızdakı kvotanı yoxlayın.",
+    );
+    error.retryAfter =
+      Number.isFinite(seconds) && seconds > 0
+        ? Math.min(86400, Math.ceil(seconds))
+        : 60;
+    throw error;
+  }
   if (!response.ok)
     throw new HttpError(
       502,
-      "AI xidməti cavab vermədi. Sonra yenidən cəhd edin.",
+      [401, 403].includes(response.status)
+        ? "Gemini açarı və ya giriş icazəsi qəbul edilmədi. Server açarını yoxlayın."
+        : response.status === 404
+          ? "Seçilmiş Gemini modeli bu hesab üçün əlçatan deyil. Model ayarını yoxlayın."
+          : "AI xidməti cavab vermədi. Sonra yenidən cəhd edin.",
     );
   try {
     const data = await response.json();
@@ -89,7 +105,9 @@ export async function modelJSON(instructions, input, name, schema) {
     if (!matchesSchema(result, schema)) throw Error();
     return result;
   } catch {
-    throw new HttpError(502, "AI cavabının formatı yanlışdır.");
+    const error = new HttpError(502, "AI cavabının formatı yanlışdır.");
+    error.code = "AI_INVALID_OUTPUT";
+    throw error;
   }
 }
 export async function parseCommand(command) {

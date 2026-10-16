@@ -160,8 +160,9 @@ export async function handler(req, res) {
       if (path === "/api/admin/import" && method === "GET")
         return json(res, 200, { job: await importStatus() });
       if (path === "/api/admin/import/start" && method === "POST") {
-        await rateLimit(`import:${current.username}`, 3, 3600);
-        const job = await startImport();
+        const job = await startImport(() =>
+          rateLimit(`import:${current.username}`, 3, 3600),
+        );
         await audit(current.username, "import.start", job.id);
         return json(res, 200, { job });
       }
@@ -211,6 +212,8 @@ export async function handler(req, res) {
     }
     throw new HttpError(404, "Sorğu yolu tapılmadı.");
   } catch (error) {
+    if (error instanceof HttpError && error.retryAfter)
+      res.setHeader("Retry-After", String(error.retryAfter));
     // Do not leak SQL, connection strings, provider responses or secrets.
     return json(res, error instanceof HttpError ? error.status : 500, {
       message:

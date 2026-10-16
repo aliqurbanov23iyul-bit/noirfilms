@@ -6,7 +6,7 @@ import { brandLogo } from "./brand.js";
 export function createAdmin({ modal, toast, esc, onCatalog, getDemoAdmin }) {
   let authenticated = false,
     job = null,
-    stopped = false;
+    importRunning = false;
   const $ = (s) => document.querySelector(s);
   const showError = (error) => {
     const e = $("#admin-message");
@@ -319,7 +319,7 @@ export function createAdmin({ modal, toast, esc, onCatalog, getDemoAdmin }) {
     });
   }
   function importView() {
-    stopped = false;
+    let stopped = false;
     modal(
       `<div class="eyebrow">TMDB-NİN ƏN YÜKSƏK REYTİNQLİ FİLMLƏRİ</div><h2>TOP 500 kolleksiyası</h2><p class="body-copy secondary">Siyahı import başladığı tarixdə sabitlənir. TMDB reytinqi IMDb reytinqi kimi göstərilmir. Məlumatlar, rejissor, aktyorlar və poster serverdə alınır.</p><p class="body-copy">${capabilities.ai ? "İngiliscə süjetlər Azərbaycan dilinə AI ilə tərcümə ediləcək." : "TMDB-də Azərbaycan dilində süjet yoxdursa, tərcümə hazır deyil kimi işarələnəcək. AI açarı qoşulanda tərcümə mümkündür."}</p><div class="import-progress"><progress id="import-meter" max="500" value="${job?.imported || 0}"></progress><p id="import-status">${job?.imported || 0} / 500 film import olunub.</p></div><div class="admin-actions"><button class="button primary" id="start-import" ${!capabilities.tmdb ? "disabled" : ""}>${job?.status === "running" ? "İmporta davam et" : "500 filmin importunu başlat"}</button><button class="button" id="stop-import">Cari filmdən sonra dayandır</button><button class="button" id="back-dashboard">Geri</button></div><p id="admin-message" role="status"></p>`,
     );
@@ -332,13 +332,37 @@ export function createAdmin({ modal, toast, esc, onCatalog, getDemoAdmin }) {
       $("#import-status").textContent =
         "Cari sorğu bitdikdən sonra import dayanacaq. Sonra davam edə bilərsiniz.";
     };
-    $("#start-import").onclick = (e) =>
+    const importMeter = $("#import-meter");
+    const warning = document.createElement("p");
+    warning.className = "body-copy secondary";
+    warning.id = "import-warning";
+    importMeter.closest(".import-progress").append(warning);
+    const showWarning = () => {
+      warning.textContent = job?.untranslated
+        ? `${job.untranslated} filmin Azərbaycan dilində süjeti hələ hazır deyil. Digər məlumatları saxlanılıb; tərcümələr sonra tamamlana bilər.`
+        : "";
+    };
+    showWarning();
+    $("#start-import").onclick = (e) => {
+      if (importRunning) {
+        toast("Cari import sorğusu bitdikdən sonra davam edin.");
+        return;
+      }
+      importRunning = true;
       operation(e.currentTarget, async () => {
         stopped = false;
-        job = (
-          await request("/api/admin/import/start", { method: "POST", data: {} })
-        ).job;
-        while (!stopped && $("#import-meter") && job.status === "running") {
+        if (job?.status !== "running")
+          job = (
+            await request("/api/admin/import/start", {
+              method: "POST",
+              data: {},
+            })
+          ).job;
+        while (
+          !stopped &&
+          $("#import-meter") === importMeter &&
+          job.status === "running"
+        ) {
           job = (
             await request("/api/admin/import/step", {
               method: "POST",
@@ -347,17 +371,28 @@ export function createAdmin({ modal, toast, esc, onCatalog, getDemoAdmin }) {
           ).job;
           const meter = $("#import-meter"),
             label = $("#import-status");
-          if (!meter || !label) break;
+          if (meter !== importMeter || !label) break;
           meter.value = job.imported || job.cursor;
           label.textContent = `${job.imported || job.cursor} / 500 film import olunub.`;
+          showWarning();
+          if (!stopped && job.status === "running")
+            await new Promise((resolve) => setTimeout(resolve, 2500));
         }
         await refresh();
-        if ($("#import-status"))
+        if ($("#import-meter") === importMeter && $("#import-status"))
           $("#import-status").textContent =
             job.status === "complete"
               ? "500 / 500 — import tamamlandı."
               : "İmport dayandırılıb; davam etmək mümkündür.";
+      }).finally(() => {
+        importRunning = false;
+        if ($("#import-meter") === importMeter)
+          $("#start-import").textContent =
+            job?.status === "running"
+              ? "İmporta davam et"
+              : "500 filmin importunu başlat";
       });
+    };
   }
   return { open };
 }

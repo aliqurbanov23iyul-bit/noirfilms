@@ -48,7 +48,7 @@ npm run build
 | `DATABASE_URL`           | Neon PostgreSQL bağlantı sətri                                           |
 | `TMDB_READ_ACCESS_TOKEN` | TMDB Read Access Token                                                   |
 | `GEMINI_API_KEY`         | NOIR AI və süjet tərcüməsi                                               |
-| `GEMINI_MODEL`           | Standart `gemini-2.5-flash`; hesabınızda əlçatan modeli seçin                |
+| `GEMINI_MODEL`           | Standart `gemini-3.5-flash-lite`; hesabınızda əlçatan modeli seçin                |
 | `ADMIN_USERNAME`         | Öz admin istifadəçi adınız                                               |
 | `ADMIN_PASSWORD_HASH`    | Aşağıdakı əmrlə yaradılan scrypt heşi                                    |
 | `ADMIN_SESSION_SECRET`   | Həmin əmrlə yaradılan təsadüfi sirr                                      |
@@ -93,6 +93,8 @@ Admin hesabına daxil olun → **TOP 500 importu** → importu başladın.
 - Hər addım bir filmin rejissorunu, aktyorlarını, reytinqini, posterini və treylerini alır. 25 filmlik rəflər yaradılır.
 - TMDB ID-si unikal olduğundan təkrar cəhdlər eyni filmi çoxaltmır. Aktiv import davam etdirilir.
 - Brauzeri bağlamaq və ya dayandırmaq son təsdiqlənmiş addımı itirmir. Cari sorğu bitdikdən sonra dayanır.
+- Davam etdirmək yeni import üçün saatlıq limiti istifadə etmir. Filmlər arasında ən azı 2.5 saniyə fasilə var; bu fasilə provayderin bütün kvotalarına zəmanət vermir.
+- Gemini natamam və ya yanlış formatlı süjet qaytarsa, film digər məlumatlarla saxlanır, süjet boş və tərcümə statusu `missing` qalır; panel çatışmayan tərcümə sayını göstərir. Gemini kvotası və ya açar problemi importu saxlayır, son uğurlu addım qorunur. Yerli limitdə təxmini gözləmə müddəti göstərilir, 429 cavablarında `Retry-After` başlığı var.
 - İki serverin eyni addımı paralel icra etməməsi üçün bazada vaxtlı iş kilidi var.
 - TMDB-nin Azərbaycan dilində süjeti varsa istifadə olunur. Yoxdursa Gemini qoşulduqda tərcümə edilir. AI yoxdursa süjet boş saxlanır və interfeys tərcümənin hazır olmadığını bildirir; ingiliscə süjet Azərbaycan dili kimi göstərilmir.
 - Sonradan AI qoşub importu yenidən başlatmaq çatışmayan tərcümələri tamamlayır; redaktorun yazdığı süjetlər qorunur.
@@ -100,7 +102,7 @@ Admin hesabına daxil olun → **TOP 500 importu** → importu başladın.
 
 ## NOIR AI
 
-Saytın teması qara/antrasit fon, isti qızılı vurğular və 3D DVD kino arxividir. Həm ziyarətçi, həm admin üçün eyni üslubda mesaj balonları, hazır sorğular və posterli film kartları olan çat hazırlanıb. AI provayderi **Google Gemini**-dir. `GEMINI_MODEL` ilə model dəyişdirilə bilər; standart `gemini-2.5-flash`-dır. Gemini açarı yalnız serverdə saxlanır.
+Saytın teması qara/antrasit fon, isti qızılı vurğular və 3D DVD kino arxividir. Həm ziyarətçi, həm admin üçün eyni üslubda mesaj balonları, hazır sorğular və posterli film kartları olan çat hazırlanıb. AI provayderi **Google Gemini**-dir. `GEMINI_MODEL` ilə model dəyişdirilə bilər; standart `gemini-3.5-flash-lite`-dır. Gemini açarı yalnız serverdə saxlanır.
 
 **Saytdakı çat:** menyudakı **NOIR AI**, sağ altdakı **Bir film tapaq**, yaxud film məlumatındakı **Oxşar filmləri tap** düyməsindən açılır. Admin girişi tələb etmir. İstifadəçi sevdiyi filmi, janrı və ya əhvalını yazır; Gemini canlı kolleksiyadan ən çox 4 film və qısa səbəblər təklif edir. Film kartına toxunanda onun məlumatları açılır. Film səhifəsindən açılan çat seçilmiş filmi nəzərə alır. Çat bazaya yazmır; qaytarılan film ID-ləri serverdə kolleksiya ilə yoxlanılır. Son 8 mesaj sorğuya daxil edilir, söhbət daimi yaddaşa yazılmır. Mesajlar Gemini xidmətinə göndərilir.
 
