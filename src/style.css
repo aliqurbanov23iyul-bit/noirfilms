@@ -1745,3 +1745,47 @@ form label,
     padding: 12px;
   }
 }
+
+.trailer-player {
+  grid-column: 1 / -1;
+  min-width: 0;
+  padding: 24px 30px 30px;
+  border-top: 1px solid var(--line, #ffffff1a);
+  background: #080809;
+}
+.trailer-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.trailer-heading h3 {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--gold);
+  margin: 0;
+}
+.trailer-heading button {
+  flex-shrink: 0;
+}
+.trailer-player iframe {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  min-height: 200px;
+  border: 0;
+  border-radius: 6px;
+  background: #000;
+}
+@media (max-width: 600px) {
+  .trailer-player {
+    padding: 20px 16px;
+  }
+  .trailer-heading {
+    align-items: flex-start;
+  }
+  .trailer-heading h3 {
+    font-size: 14px;
+  }
+}
