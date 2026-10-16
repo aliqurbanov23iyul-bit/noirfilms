@@ -27,7 +27,7 @@ export async function startImport(beforeCreate = async () => {}) {
    VALUES(${randomUUID()},${JSON.stringify(ids)}::jsonb,500) RETURNING id,cursor,total,status,created_at`;
   return job;
 }
-export async function importStep(id) {
+export async function importStep(id, { translate = true } = {}) {
   const sql = database();
   const [job] =
     await sql`UPDATE noir_imports SET leased_until=now()+interval '2 minutes'
@@ -47,6 +47,7 @@ export async function importStep(id) {
     if (tmdbId) {
       const film = await movieTMDB(tmdbId, {
         tolerateInvalidTranslation: true,
+        translate,
       });
       const shelfIndex = Math.floor(job.cursor / 25) + 1;
       const shelfId = `top-${String(shelfIndex).padStart(2, "0")}`;

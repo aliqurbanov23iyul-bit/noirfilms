@@ -69,7 +69,7 @@ export async function searchTMDB(title, year) {
 }
 export async function movieTMDB(
   id,
-  { tolerateInvalidTranslation = false } = {},
+  { tolerateInvalidTranslation = false, translate = true } = {},
 ) {
   if (!Number.isSafeInteger(Number(id)) || Number(id) < 1)
     throw new HttpError(400, "TMDB identifikatoru yanlışdır.");
@@ -81,7 +81,7 @@ export async function movieTMDB(
     ?.data?.overview;
   let plot = az || "",
     translationStatus = az ? "tmdb-az" : "missing";
-  if (!plot && f.overview && aiConfigured()) {
+  if (!plot && f.overview && translate && aiConfigured()) {
     try {
       plot = await translatePlot(f.overview);
       translationStatus = "ai-translated";

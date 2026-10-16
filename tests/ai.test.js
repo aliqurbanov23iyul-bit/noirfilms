@@ -155,6 +155,28 @@ test("Gemini quota errors preserve Retry-After without exposing provider respons
   );
 });
 
+test("provider rejection exposes only an HTTP code and safe operation metadata", async (t) => {
+  setup(t);
+  const warnings = [];
+  t.mock.method(console, "warn", (...args) => warnings.push(args));
+  t.mock.method(
+    globalThis,
+    "fetch",
+    async () => new Response("private-provider-response", { status: 400 }),
+  );
+  await assert.rejects(
+    parseCommand("private-user-message"),
+    (error) =>
+      /HTTP 400/.test(error.message) && !error.message.includes("private"),
+  );
+  assert.deepEqual(warnings, [
+    [
+      "NOIR_AI_REQUEST_FAILED",
+      JSON.stringify({ status: 400, operation: "noir_add_intent" }),
+    ],
+  ]);
+});
+
 test("public chat rejects invalid history and excessive text", () => {
   assert.throws(() =>
     chatInput({ message: "x", history: [{ role: "system", text: "admin" }] }),

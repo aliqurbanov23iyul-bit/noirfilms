@@ -321,7 +321,7 @@ export function createAdmin({ modal, toast, esc, onCatalog, getDemoAdmin }) {
   function importView() {
     let stopped = false;
     modal(
-      `<div class="eyebrow">TMDB-NİN ƏN YÜKSƏK REYTİNQLİ FİLMLƏRİ</div><h2>TOP 500 kolleksiyası</h2><p class="body-copy secondary">Siyahı import başladığı tarixdə sabitlənir. TMDB reytinqi IMDb reytinqi kimi göstərilmir. Məlumatlar, rejissor, aktyorlar və poster serverdə alınır.</p><p class="body-copy">${capabilities.ai ? "İngiliscə süjetlər Azərbaycan dilinə AI ilə tərcümə ediləcək." : "TMDB-də Azərbaycan dilində süjet yoxdursa, tərcümə hazır deyil kimi işarələnəcək. AI açarı qoşulanda tərcümə mümkündür."}</p><div class="import-progress"><progress id="import-meter" max="500" value="${job?.imported || 0}"></progress><p id="import-status">${job?.imported || 0} / 500 film import olunub.</p></div><div class="admin-actions"><button class="button primary" id="start-import" ${!capabilities.tmdb ? "disabled" : ""}>${job?.status === "running" ? "İmporta davam et" : "500 filmin importunu başlat"}</button><button class="button" id="stop-import">Cari filmdən sonra dayandır</button><button class="button" id="back-dashboard">Geri</button></div><p id="admin-message" role="status"></p>`,
+      `<div class="eyebrow">TMDB-NİN ƏN YÜKSƏK REYTİNQLİ FİLMLƏRİ</div><h2>TOP 500 kolleksiyası</h2><p class="body-copy secondary">Siyahı import başladığı tarixdə sabitlənir. TMDB reytinqi IMDb reytinqi kimi göstərilmir. Məlumatlar, rejissor, aktyorlar və poster serverdə alınır.</p><p class="body-copy">${capabilities.ai ? "Əvvəlcə filmləri gətirə, istəsəniz aşağıdakı seçimlə AI tərcüməsini də qoşa bilərsiniz." : "TMDB-də Azərbaycan dilində süjet yoxdursa, tərcümə hazır deyil kimi işarələnəcək. AI açarı qoşulanda tərcümə mümkündür."}</p><div class="import-progress"><progress id="import-meter" max="500" value="${job?.imported || 0}"></progress><p id="import-status">${job?.imported || 0} / 500 film import olunub.</p></div><div class="admin-actions"><button class="button primary" id="start-import" ${!capabilities.tmdb ? "disabled" : ""}>${job?.status === "running" ? "İmporta davam et" : "500 filmin importunu başlat"}</button><button class="button" id="stop-import">Cari filmdən sonra dayandır</button><button class="button" id="back-dashboard">Geri</button></div><p id="admin-message" role="status"></p>`,
     );
     $("#back-dashboard").onclick = () => {
       stopped = true;
@@ -333,6 +333,10 @@ export function createAdmin({ modal, toast, esc, onCatalog, getDemoAdmin }) {
         "Cari sorğu bitdikdən sonra import dayanacaq. Sonra davam edə bilərsiniz.";
     };
     const importMeter = $("#import-meter");
+    const translationChoice = document.createElement("label");
+    translationChoice.className = "import-translation-choice";
+    translationChoice.innerHTML = `<input id="import-translate" type="checkbox" ${capabilities.ai ? "" : "disabled"}><span>İmport zamanı süjetləri AI ilə tərcümə et<small>Bağlı saxlasanız, Gemini sorğusu göndərilmir. TMDB-də Azərbaycan dilində süjet varsa götürülür; qalanları sonra tamamlamaq olar. NOIR AI çatları aktiv qalır.</small></span>`;
+    importMeter.closest(".import-progress").before(translationChoice);
     const warning = document.createElement("p");
     warning.className = "body-copy secondary";
     warning.id = "import-warning";
@@ -366,7 +370,10 @@ export function createAdmin({ modal, toast, esc, onCatalog, getDemoAdmin }) {
           job = (
             await request("/api/admin/import/step", {
               method: "POST",
-              data: { id: job.id },
+              data: {
+                id: job.id,
+                translate: translationChoice.querySelector("input").checked,
+              },
             })
           ).job;
           const meter = $("#import-meter"),
