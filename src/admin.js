@@ -340,8 +340,12 @@ export function createAdmin({ modal, toast, esc, onCatalog, getDemoAdmin }) {
               method: "POST",
               data: { token: plan.token, index: item.index, confirm: true },
             });
+            item.status = result.status;
+            item.message = result.message;
             lines.push(result.message);
           } catch (error) {
+            item.status = "failed";
+            item.message = "Əməliyyat təsdiqlənmədi: " + error.message;
             lines.push(
               (item.film?.title || item.title) +
                 " — əməliyyat təsdiqlənmədi: " +

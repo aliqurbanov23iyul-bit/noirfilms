@@ -40,11 +40,13 @@ export function mountChat(
           esc([film?.year, film?.director].filter(Boolean).join(" · ")) +
           '</small><span class="chat-reason">' +
           esc(
-            item.status === "ready"
-              ? item.action === "update"
-                ? "TMDB məlumatları yenilənəcək; süjet və rəf qorunacaq"
-                : "Kolleksiyaya əlavə ediləcək"
-              : item.message,
+            plan.cancelled
+              ? "Ləğv edildi; bazaya yazılmadı"
+              : item.status === "ready"
+                ? item.action === "update"
+                  ? "TMDB məlumatları yenilənəcək; süjet və rəf qorunacaq"
+                  : "Kolleksiyaya əlavə ediləcək"
+                : item.message,
           ) +
           "</span></span></div>"
         );
