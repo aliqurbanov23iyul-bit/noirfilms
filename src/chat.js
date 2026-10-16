@@ -1,5 +1,5 @@
 import { icon } from "./icons.js";
-import { request, capabilities } from "./api.js";
+import { request } from "./api.js";
 import { brandMark } from "./brand.js";
 
 export function mountChat(
@@ -85,6 +85,9 @@ export function mountChat(
       .filter((item) => item.delivered !== false)
       .slice(-8)
       .map(({ role, text }) => ({ role, text: text.slice(0, 2000) }));
+    const previous = messages.at(-1);
+    if (previous?.role === "user" && previous.delivered === false)
+      messages.pop();
     const entry = { role: "user", text: message.trim(), delivered: false };
     await run(async () => {
       messages.push(entry);
@@ -120,7 +123,7 @@ export function mountChat(
   render();
 }
 
-export function createCinemaChat({ modal, esc, isLive, onFilm }) {
+export function createCinemaChat({ modal, esc, onFilm }) {
   let messages = [],
     selectedId = null;
   function open(film = null, prompt = "") {
@@ -138,7 +141,7 @@ export function createCinemaChat({ modal, esc, isLive, onFilm }) {
         : "Salam, mən NOIR AI. Sevdiyin filmi və ya bu axşamkı əhvalını de — kolleksiyadan sənə uyğun filmlər seçək.",
       context: film
         ? `${film.title} · ${film.year} əsasında seçimlər`
-        : "Yalnız NOIR kolleksiyasından seçilmiş filmlər",
+        : "Qeydiyyatsız söhbət et · Zövqünə uyğun film tap",
       suggestions: film
         ? [
             "Bu filmə oxşar 4 film tap",
@@ -152,10 +155,6 @@ export function createCinemaChat({ modal, esc, isLive, onFilm }) {
           ],
       placeholder: "Məsələn, Interstellar kimi bir film axtarıram…",
       async send(message, history) {
-        if (!capabilities.runtime || !capabilities.ai || !isLive())
-          throw Error(
-            "Çatın işləməsi üçün Gemini və canlı kolleksiya qoşulmalıdır. Hazırda canlı AI cavabı verilmir.",
-          );
         return request("/api/ai/chat", {
           method: "POST",
           data: { message, history, filmId: film?.id },
@@ -164,6 +163,7 @@ export function createCinemaChat({ modal, esc, isLive, onFilm }) {
       choose: (choice) => onFilm(choice),
     });
     if (prompt) document.querySelector("#chat-input").value = prompt;
+    document.querySelector("#chat-input").focus();
   }
   return { open };
 }

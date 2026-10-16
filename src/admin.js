@@ -417,16 +417,22 @@ export function createAdmin({ modal, toast, esc, onCatalog, getDemoAdmin }) {
       operation(event.currentTarget, async () => {
         stop = false;
         let done = 0;
+        const failed = [];
         for (const film of missing) {
           if (stop || !progress.isConnected) break;
           progress.textContent = `${done} / ${missing.length} · ${film.title} tərcümə edilir…`;
-          await request("/api/admin/translate", {
-            method: "POST",
-            data: { id: film.id },
-          });
-          done++;
+          try {
+            await request("/api/admin/translate", {
+              method: "POST",
+              data: { id: film.id },
+            });
+            done++;
+          } catch (error) {
+            if (error.code !== "AI_INVALID_OUTPUT") throw error;
+            failed.push(film.title);
+          }
           if (progress.isConnected)
-            progress.textContent = `${done} / ${missing.length} süjet tamamlandı.`;
+            progress.textContent = `${done} süjet tamamlandı. ${failed.length} film sonra yenidən yoxlanacaq.${failed.length ? " · " + failed.join(", ") : ""}`;
           if (done < missing.length && !stop)
             await new Promise((resolve) => setTimeout(resolve, 2500));
         }

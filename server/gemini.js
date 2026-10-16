@@ -46,8 +46,8 @@ export async function generateGemini(instructions, input, name, schema) {
             systemInstruction: { parts: [{ text: instructions }] },
             contents: [{ role: "user", parts: [{ text: input }] }],
             generationConfig: {
-              responseMimeType: "application/json",
-              responseJsonSchema: schema,
+              responseMimeType: schema ? "application/json" : "text/plain",
+              ...(schema ? { responseJsonSchema: schema } : {}),
               maxOutputTokens: 4096,
             },
           }),

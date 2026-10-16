@@ -34,8 +34,12 @@ export async function request(path, { method = "GET", data } = {}) {
       "Serverdən gözlənilən cavab alınmadı. Bir qədər sonra yenidən cəhd edin.",
     );
   }
-  if (!response.ok)
-    throw new Error(result.message || "Əməliyyat tamamlanmadı.");
+  if (!response.ok) {
+    const error = new Error(result.message || "Əməliyyat tamamlanmadı.");
+    error.status = response.status;
+    error.code = result.code;
+    throw error;
+  }
   return result;
 }
 export async function loadCapabilities() {
