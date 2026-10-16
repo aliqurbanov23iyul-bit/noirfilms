@@ -167,3 +167,8 @@ Rəsmi sənədlər: [Neon driver](https://github.com/neondatabase/serverless), [
 ### Tərcümə sürəti və 429
 
 Toplu tərcümələr arasında 15 saniyə fasilə var. 429 zamanı serverin `Retry-After` müddəti 120 saniyəyədəkdirsə panel geri sayır və həmin filmi yalnız bir dəfə təkrar yoxlayır. Dayandır və Geri düymələri gözləməni ləğv edir. Gündəlik sorğu limiti Groq başlığında bitmiş göstərilirsə və ya uzun fasilə tələb edilirsə avtomatik təkrar yoxdur. İkinci 429 prosesi saxlayır. Natamam/yanlış cavablı filmlər sonrakı yoxlama üçün buraxılır; mövcud süjetlər dəyişdirilmir. Fasilə bütün hesabın token və günlük limitlərinə zəmanət vermir; sayt çatı da eyni Groq hesabının limitindən istifadə edir. AI ilə importda da 15 saniyə, yalnız TMDB importunda 2,5 saniyə fasilə var.
+
+
+### Sayt daxilində treyler
+
+Film məlumatında **Treylerə bax** düyməsi NOIR pəncərəsində YouTube pleyerini açır; ayrıca YouTube səhifəsinə keçid verilmir. Pleyer yalnız düyməyə basıldıqda yüklənir, tam ekran və mobil inline baxış dəstəklənir. Treyleri bağlamaq, film pəncərəsini bağlamaq və ya 3D qutuya qayıtmaq iframe-i silərək səsi də dayandırır. Treyler ID-si yoxdursa düymə bağlıdır. Video sahibinin embed və region məhdudiyyətləri yenə tətbiq olunur; bütün videoların oynadılmasına zəmanət verilmir.

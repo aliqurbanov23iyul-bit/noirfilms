@@ -220,7 +220,13 @@ function modal(html, type = "standard") {
   );
   imageFallbacks($("#content"));
 }
+function stopTrailer(restoreFocus = false) {
+  $("#trailer-player")?.remove();
+  $("#watch-trailer")?.setAttribute("aria-expanded", "false");
+  if (restoreFocus) $("#watch-trailer")?.focus();
+}
 function close() {
+  stopTrailer();
   dialogToken++;
   inspectedFilm = null;
   $("#case-controls").classList.add("hidden");
@@ -257,17 +263,69 @@ async function select(f, skipAnimation = false) {
     $("#case-status").classList.add("hidden");
   }
   modal(
-    `<div class="detail-art"><img class="detail-poster" src="${esc(f.poster)}" alt="${esc(f.title)} — film posteri"><span class="poster-note">NOIR SEÇİMİ · KİNO ARXİVİ</span></div><div class="detail-content"><div class="eyebrow">HEKAYƏYƏ YAXINLAŞIN</div><h2>${esc(f.title)}</h2><div class="film-meta"><span>${f.year}</span><i></i><span>${esc(f.genre)}</span><span class="rating"><b>${esc(f.ratingSource || "IMDb")}</b> ★ ${f.rating}</span></div><p class="plot">${esc(f.plot || "Bu film üçün Azərbaycan dilində süjet hələ əlavə edilməyib.")}</p><dl class="credits"><div><dt>Rejissor</dt><dd>${esc(f.director)}</dd></div><div><dt>Aktyorlar</dt><dd>${esc(f.cast)}</dd></div></dl><div class="detail-actions"><a class="button primary" href="https://www.youtube.com/watch?v=${encodeURIComponent(f.trailer)}" target="_blank" rel="noopener">${icon("play")} Treylerə bax</a><button class="button" id="save">${icon(saved.includes(f.id) ? "check" : "heart")} ${saved.includes(f.id) ? "Kolleksiyamdadır" : "Kolleksiyama əlavə et"}</button></div><button class="text-button inspect-case" id="inspect-case">Açılmış 3D qutuya bax →</button><div class="ai-actions"><button id="analyze">${icon("spark")} AI ilə analiz et</button><button id="similar">Oxşar filmləri tap ${icon("arrow")}</button></div><div id="result" class="result" aria-live="polite"></div><p class="metadata-note">${liveCatalog ? "Film məlumatları · Reytinqlər zamanla dəyişir." : "Yerli nümayiş kolleksiyası · Canlı TOP 500 deyil."}</p></div>`,
+    `<div class="detail-art"><img class="detail-poster" src="${esc(f.poster)}" alt="${esc(f.title)} — film posteri"><span class="poster-note">NOIR SEÇİMİ · KİNO ARXİVİ</span></div><div class="detail-content"><div class="eyebrow">HEKAYƏYƏ YAXINLAŞIN</div><h2>${esc(f.title)}</h2><div class="film-meta"><span>${f.year}</span><i></i><span>${esc(f.genre)}</span><span class="rating"><b>${esc(f.ratingSource || "IMDb")}</b> ★ ${f.rating}</span></div><p class="plot">${esc(f.plot || "Bu film üçün Azərbaycan dilində süjet hələ əlavə edilməyib.")}</p><dl class="credits"><div><dt>Rejissor</dt><dd>${esc(f.director)}</dd></div><div><dt>Aktyorlar</dt><dd>${esc(f.cast)}</dd></div></dl><div class="detail-actions"><button type="button" class="button primary" id="watch-trailer" aria-expanded="false" aria-controls="trailer-player">${icon("play")} Treylerə bax</button><button class="button" id="save">${icon(saved.includes(f.id) ? "check" : "heart")} ${saved.includes(f.id) ? "Kolleksiyamdadır" : "Kolleksiyama əlavə et"}</button></div><button class="text-button inspect-case" id="inspect-case">Açılmış 3D qutuya bax →</button><div class="ai-actions"><button id="analyze">${icon("spark")} AI ilə analiz et</button><button id="similar">Oxşar filmləri tap ${icon("arrow")}</button></div><div id="result" class="result" aria-live="polite"></div><p class="metadata-note">${liveCatalog ? "Film məlumatları · Reytinqlər zamanla dəyişir." : "Yerli nümayiş kolleksiyası · Canlı TOP 500 deyil."}</p></div>`,
     "film-panel",
   );
-  if (!f.trailer) {
-    const link = $(".detail-actions a");
-    link.removeAttribute("href");
-    link.removeAttribute("target");
-    link.setAttribute("aria-disabled", "true");
-    link.textContent = "Treyler hələ əlavə edilməyib";
+  const trailerButton = $("#watch-trailer");
+  if (!/^[\w-]{11}$/.test(f.trailer || "")) {
+    trailerButton.disabled = true;
+    trailerButton.textContent = "Treyler hələ əlavə edilməyib";
+  } else {
+    trailerButton.onclick = () => {
+      if ($("#trailer-player")) {
+        stopTrailer(true);
+        return;
+      }
+      const section = document.createElement("section");
+      section.id = "trailer-player";
+      section.className = "trailer-player";
+      section.setAttribute("aria-label", f.title + " — treyler");
+      const heading = document.createElement("div");
+      heading.className = "trailer-heading";
+      const title = document.createElement("h3");
+      title.textContent = f.title + " · Treyler";
+      const dismiss = document.createElement("button");
+      dismiss.type = "button";
+      dismiss.className = "text-button";
+      dismiss.textContent = "Treyleri bağla ×";
+      dismiss.onclick = () => stopTrailer(true);
+      heading.append(title, dismiss);
+      const frame = document.createElement("iframe");
+      const url = new URL(
+        "https://www.youtube-nocookie.com/embed/" + f.trailer,
+      );
+      url.search = new URLSearchParams({
+        autoplay: "1",
+        playsinline: "1",
+        rel: "0",
+        origin: window.location.origin,
+      }).toString();
+      frame.src = url.href;
+      frame.title = f.title + " — treyler videosu";
+      frame.allow = "autoplay; encrypted-media; picture-in-picture; fullscreen";
+      frame.allowFullscreen = true;
+      frame.referrerPolicy = "strict-origin-when-cross-origin";
+      frame.onerror = () => {
+        const message = document.createElement("p");
+        message.className = "body-copy";
+        message.textContent =
+          "Treyler hazırda yüklənmir. Bir qədər sonra yenidən yoxlayın.";
+        frame.replaceWith(message);
+      };
+      section.append(heading, frame);
+      $("#content").append(section);
+      trailerButton.setAttribute("aria-expanded", "true");
+      section.scrollIntoView({
+        block: "nearest",
+        behavior: matchMedia("(prefers-reduced-motion: reduce)").matches
+          ? "instant"
+          : "smooth",
+      });
+      dismiss.focus({ preventScroll: true });
+    };
   }
   $("#inspect-case").onclick = async () => {
+    stopTrailer();
     const token = dialogToken;
     const outsideFilter = !filtered.some((item) => item.id === f.id);
     if (outsideFilter) clear();
@@ -396,7 +454,7 @@ document.addEventListener("keydown", (e) => {
     if (e.key === "Tab") {
       const elements = [
         ...$("#overlay").querySelectorAll(
-          "button:not([disabled]),a,input,select,textarea",
+          "button:not([disabled]),a,input,select,textarea,iframe",
         ),
       ].filter((x) => x.getClientRects().length);
       if (e.shiftKey && document.activeElement === elements[0]) {
