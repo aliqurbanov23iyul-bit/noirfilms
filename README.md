@@ -162,3 +162,8 @@ Testlərdə TMDB/Gemini xarici cavabları fixture-lərlə əvəz olunur; bu, can
 Nümunə posterlərinin hüquqları müvafiq sahiblərinə məxsusdur. Manrope Google Fonts-dan yüklənir. TMDB-dən canlı məlumatlar alınanda reytinq mənbəyi ayrıca TMDB göstərilir. Nümunə IMDb reytinqləri canlı yenilənmir.
 
 Rəsmi sənədlər: [Neon driver](https://github.com/neondatabase/serverless), [TMDB Top Rated](https://developer.themoviedb.org/reference/movie-top-rated-list), [TMDB autentifikasiyası](https://developer.themoviedb.org/docs/authentication-application), [Vercel Node funksiyaları](https://vercel.com/docs/functions/runtimes/node-js), [Gemini Structured Outputs](https://ai.google.dev/gemini-api/docs/structured-output).
+
+
+### Tərcümə sürəti və 429
+
+Toplu tərcümələr arasında 15 saniyə fasilə var. 429 zamanı serverin `Retry-After` müddəti 120 saniyəyədəkdirsə panel geri sayır və həmin filmi yalnız bir dəfə təkrar yoxlayır. Dayandır və Geri düymələri gözləməni ləğv edir. Gündəlik sorğu limiti Groq başlığında bitmiş göstərilirsə və ya uzun fasilə tələb edilirsə avtomatik təkrar yoxdur. İkinci 429 prosesi saxlayır. Natamam/yanlış cavablı filmlər sonrakı yoxlama üçün buraxılır; mövcud süjetlər dəyişdirilmir. Fasilə bütün hesabın token və günlük limitlərinə zəmanət vermir; sayt çatı da eyni Groq hesabının limitindən istifadə edir. AI ilə importda da 15 saniyə, yalnız TMDB importunda 2,5 saniyə fasilə var.

@@ -71,10 +71,17 @@ export async function modelJSON(instructions, input, name, schema) {
     );
   if (response.status === 429) {
     const seconds = Number(response.headers.get("retry-after"));
+    const daily =
+      provider === "groq" &&
+      response.headers.has("x-ratelimit-remaining-requests") &&
+      Number(response.headers.get("x-ratelimit-remaining-requests")) === 0;
     const error = new HttpError(
       429,
-      `${label} sorğu limiti dolub. Bir qədər sonra yenidən cəhd edin. Gündəlik kvota bitibsə, AI hesabınızdakı limitləri yoxlayın.`,
+      daily
+        ? `${label} gündəlik sorğu limiti bitib. Hazır tərcümələr saxlanılıb. Hesabınızdakı limitin yenilənməsini gözləyin və ya planı dəyişin.`
+        : `${label} mətn və ya sorğu limiti dolub. Bir qədər sonra yenidən cəhd edin. Hazır tərcümələr saxlanılıb.`,
     );
+    if (daily) error.code = "AI_DAILY_QUOTA";
     error.retryAfter =
       Number.isFinite(seconds) && seconds > 0
         ? Math.min(86400, Math.ceil(seconds))

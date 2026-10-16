@@ -38,6 +38,9 @@ export async function request(path, { method = "GET", data } = {}) {
     const error = new Error(result.message || "Əməliyyat tamamlanmadı.");
     error.status = response.status;
     error.code = result.code;
+    const seconds = Number(response.headers.get("retry-after"));
+    error.retryAfter =
+      Number.isFinite(seconds) && seconds > 0 ? Math.ceil(seconds) : null;
     throw error;
   }
   return result;
