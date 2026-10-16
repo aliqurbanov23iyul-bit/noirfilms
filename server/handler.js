@@ -19,7 +19,7 @@ import * as repo from "./repository.js";
 import { searchTMDB, movieTMDB } from "./tmdb.js";
 import { modelJSON, aiConfigured, aiProvider } from "./ai.js";
 import { publicAI, chatInput, recommendChat } from "./chat.js";
-import { adminConversation } from "./admin-assistant.js";
+import { adminAssistant, confirmTool } from "./admin-tools.js";
 import { startImport, importStep, importStatus } from "./importer.js";
 
 export async function handler(req, res) {
@@ -133,18 +133,13 @@ export async function handler(req, res) {
         await rateLimit(`assistant:${current.username}`, 60, 3600);
         const input = chatInput({ message: b.command, history: b.history });
         const { films } = await repo.catalog();
-        const reply = await adminConversation(input, films);
-        const results = reply.searchTitle
-          ? await searchTMDB(text(reply.searchTitle, "Film adı"), reply.year)
-          : [];
-        return json(res, 200, {
-          message:
-            reply.text +
-            (reply.searchTitle && !results.length
-              ? " TMDB-də uyğun film tapılmadı."
-              : ""),
-          results,
-        });
+        return json(res, 200, await adminAssistant(input, films, current));
+      }
+      if (path === "/api/admin/assistant/confirm" && method === "POST") {
+        if (b.confirm !== true)
+          throw new HttpError(400, "Əməliyyat ayrıca təsdiqlənməlidir.");
+        await rateLimit(`assistant-write:${current.username}`, 60, 3600);
+        return json(res, 200, await confirmTool(b.token, b.index, current));
       }
       if (path === "/api/admin/ai/check" && method === "POST") {
         await rateLimit(`ai-check:${current.username}`, 5, 600);

@@ -60,6 +60,7 @@ export async function searchTMDB(title, year) {
   return (data.results || []).slice(0, 6).map((f) => ({
     tmdbId: f.id,
     title: f.original_title || f.title,
+    localizedTitle: f.title,
     year: Number(f.release_date?.slice(0, 4)) || null,
     poster: f.poster_path
       ? `https://image.tmdb.org/t/p/w342${f.poster_path}`

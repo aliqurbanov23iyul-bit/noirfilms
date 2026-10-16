@@ -244,6 +244,7 @@ function close() {
   document.body.classList.remove("dialog-open");
   room.reset();
   lastFocus?.focus();
+  if (catalogueRefreshPending) refreshVisibleCatalogue();
 }
 $(".close").onclick = close;
 $("#overlay").onclick = (e) => {
@@ -571,3 +572,38 @@ expandRoom.onclick = () => {
   expandRoom.setAttribute("aria-pressed", String(expanded));
   room.resize();
 };
+
+// Refresh catalogue data after an authenticated admin change, without changing the room design.
+let catalogueRefreshPending = false;
+let catalogueRefreshRunning = false;
+async function refreshVisibleCatalogue() {
+  if (
+    !liveCatalog ||
+    document.hidden ||
+    inspectedFilm ||
+    !$("#overlay").classList.contains("hidden")
+  ) {
+    catalogueRefreshPending = true;
+    return;
+  }
+  if (catalogueRefreshRunning) return;
+  catalogueRefreshRunning = true;
+  try {
+    applyCatalog(await request("/api/catalog"));
+    catalogueRefreshPending = false;
+  } catch {
+    catalogueRefreshPending = true;
+  } finally {
+    catalogueRefreshRunning = false;
+  }
+}
+if (typeof BroadcastChannel !== "undefined") {
+  const catalogueChannel = new BroadcastChannel("noir-catalogue");
+  catalogueChannel.onmessage = (event) => {
+    if (event.data?.type === "changed") refreshVisibleCatalogue();
+  };
+}
+window.addEventListener("focus", refreshVisibleCatalogue);
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) refreshVisibleCatalogue();
+});

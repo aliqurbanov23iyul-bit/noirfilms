@@ -1,6 +1,6 @@
 import { HttpError } from "./http.js";
 
-export async function generateGemini(instructions, input, name, schema) {
+export async function generateGemini(instructions, input, name, schema, tools) {
   const primary = process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
   const fallback = process.env.GEMINI_FALLBACK_MODEL ?? "gemini-3.8-flash";
   if (
@@ -45,8 +45,27 @@ export async function generateGemini(instructions, input, name, schema) {
           body: JSON.stringify({
             systemInstruction: { parts: [{ text: instructions }] },
             contents: [{ role: "user", parts: [{ text: input }] }],
+            ...(tools
+              ? {
+                  tools: [
+                    {
+                      functionDeclarations: tools.map((t) => ({
+                        name: t.function.name,
+                        description: t.function.description,
+                        parametersJsonSchema: t.function.parameters,
+                      })),
+                    },
+                  ],
+                }
+              : {}),
             generationConfig: {
-              responseMimeType: schema ? "application/json" : "text/plain",
+              ...(tools
+                ? {}
+                : {
+                    responseMimeType: schema
+                      ? "application/json"
+                      : "text/plain",
+                  }),
               ...(schema ? { responseJsonSchema: schema } : {}),
               maxOutputTokens: 4096,
             },

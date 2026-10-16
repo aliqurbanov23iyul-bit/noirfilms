@@ -108,3 +108,73 @@ export async function upsertTMDB(f, rank = null, snapshot = null) {
     RETURNING *`;
   return filmRow(row);
 }
+
+export async function filmRevision(id) {
+  const sql = database();
+  const [row] =
+    await sql`SELECT md5(to_jsonb(f)::text) AS version FROM films f WHERE id=${id}`;
+  if (!row) throw new HttpError(404, "Film tapılmadı.");
+  return row.version;
+}
+
+// Only called from the authenticated, CSRF-checked assistant confirmation route.
+export async function applyAssistantFilm(f, item, actor) {
+  const sql = database();
+  if (item.action === "update") {
+    const [row] = await sql`WITH changed AS (
+      UPDATE films SET title=${f.title},year=${f.year},genre=${f.genre},
+      director=CASE WHEN ${f.director}<>'' THEN ${f.director} ELSE director END,
+      actors=CASE WHEN ${f.cast}<>'' THEN ${f.cast} ELSE actors END,
+      plot=CASE WHEN plot='' THEN ${f.plot} ELSE plot END,
+      translation_status=CASE WHEN plot='' THEN ${f.translationStatus} ELSE translation_status END,
+      rating=${f.rating},rating_source='TMDB',
+      poster_url=CASE WHEN ${f.poster}<>'' THEN ${f.poster} ELSE poster_url END,
+      trailer_id=CASE WHEN ${f.trailer}<>'' THEN ${f.trailer} ELSE trailer_id END,
+      source_updated_at=now(),updated_at=now()
+      WHERE id=${item.id} AND tmdb_id=${f.tmdbId} AND md5(to_jsonb(films)::text)=${item.version}
+      RETURNING *
+    ), logged AS (
+      INSERT INTO noir_audit(actor,action,record_id) SELECT ${actor},'assistant.film.update',id FROM changed
+    ) SELECT * FROM changed`;
+    if (!row)
+      throw new HttpError(
+        409,
+        "Film dəyişib və ya silinib. Yeni təsdiq hazırlayın.",
+      );
+    return {
+      status: "updated",
+      film: filmRow(row),
+      message: row.title + " — məlumatları yeniləndi.",
+    };
+  }
+  if (item.action !== "add")
+    throw new HttpError(400, "Yazma əməliyyatı yanlışdır.");
+  const [row] = await sql`WITH added AS (
+    INSERT INTO films(id,tmdb_id,title,year,genre,director,actors,plot,rating,rating_source,poster_url,trailer_id,shelf_id,position,translation_status,source_updated_at)
+    SELECT ${randomUUID()},${f.tmdbId},${f.title},${f.year},${f.genre},${f.director},${f.cast},${f.plot},${f.rating},'TMDB',${f.poster},${f.trailer},'main',
+      (SELECT COALESCE(MAX(position),0)+1 FROM films),${f.translationStatus},now()
+    WHERE NOT EXISTS(SELECT 1 FROM films WHERE year=${f.year} AND lower(regexp_replace(title,'[^[:alnum:]]','','g'))=lower(regexp_replace(${f.title},'[^[:alnum:]]','','g')))
+    ON CONFLICT(tmdb_id) DO NOTHING RETURNING *
+  ), logged AS (
+    INSERT INTO noir_audit(actor,action,record_id) SELECT ${actor},'assistant.film.add',id FROM added
+  ) SELECT * FROM added`;
+  if (row)
+    return {
+      status: "added",
+      film: filmRow(row),
+      message: row.title + " — kolleksiyaya əlavə edildi.",
+    };
+  const [existing] =
+    await sql`SELECT * FROM films WHERE tmdb_id=${f.tmdbId} OR (year=${f.year} AND lower(regexp_replace(title,'[^[:alnum:]]','','g'))=lower(regexp_replace(${f.title},'[^[:alnum:]]','','g'))) LIMIT 1`;
+  if (!existing)
+    throw new HttpError(
+      409,
+      "Əlavə etmə təsdiqlənmədi. Kolleksiyanı yenidən yoxlayın.",
+    );
+  return {
+    status: "exists",
+    film: filmRow(existing),
+    message:
+      existing.title + " — artıq kolleksiyadadır; təkrar əlavə edilmədi.",
+  };
+}

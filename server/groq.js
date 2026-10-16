@@ -1,6 +1,6 @@
 import { HttpError } from "./http.js";
 
-export async function generateGroq(instructions, input, name, schema) {
+export async function generateGroq(instructions, input, name, schema, tools) {
   const model = process.env.GROQ_MODEL || "qwen/qwen3.8-27b";
   if (!/^[a-zA-Z0-9][a-zA-Z0-9/._-]{0,127}$/.test(model))
     throw new HttpError(503, "Groq model ayarı yanlışdır.");
@@ -41,7 +41,11 @@ export async function generateGroq(instructions, input, name, schema) {
               },
               { role: "user", content: input },
             ],
-            ...(schema ? { response_format: { type: "json_object" } } : {}),
+            ...(tools
+              ? { tools, tool_choice: "auto", parallel_tool_calls: false }
+              : schema
+                ? { response_format: { type: "json_object" } }
+                : {}),
             ...(model === "qwen/qwen3.8-27b"
               ? { reasoning_effort: "none" }
               : {}),

@@ -34,7 +34,12 @@ function modal(html, type = "standard") {
     heading.focus({ preventScroll: true });
   }
 }
+const catalogueChannel =
+  typeof BroadcastChannel !== "undefined"
+    ? new BroadcastChannel("noir-catalogue")
+    : null;
 function updateCatalog({ films }) {
+  catalogueChannel?.postMessage({ type: "changed" });
   document
     .querySelector('[data-studio="open"]')
     .setAttribute("aria-label", `Kolleksiya — ${films.length} film`);
