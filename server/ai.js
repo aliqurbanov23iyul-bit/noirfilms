@@ -31,10 +31,17 @@ function matchesSchema(value, schema) {
   )
     return false;
   if (schema.enum && !schema.enum.includes(value)) return false;
+  if (
+    typeof value === "number" &&
+    ((schema.minimum !== undefined && value < schema.minimum) ||
+      (schema.maximum !== undefined && value > schema.maximum))
+  )
+    return false;
   if (typeof value === "string" && value.length > (schema.maxLength || 6000))
     return false;
   if (Array.isArray(value))
     return (
+      value.length >= (schema.minItems || 0) &&
       value.length <= (schema.maxItems || 20) &&
       value.every((item) => matchesSchema(item, schema.items))
     );
@@ -50,7 +57,7 @@ function matchesSchema(value, schema) {
   return true;
 }
 
-export async function modelJSON(instructions, input, name, schema) {
+async function modelResponse(instructions, input, name, schema, tools) {
   const provider = aiProvider();
   const label = provider === "groq" ? "Groq" : "Gemini";
   if (!aiConfigured())
@@ -63,6 +70,7 @@ export async function modelJSON(instructions, input, name, schema) {
     input,
     name,
     schema,
+    tools,
   );
   if (!response.ok)
     console.warn(
@@ -101,6 +109,12 @@ export async function modelJSON(instructions, input, name, schema) {
               ? `${label} hazırda əlçatmazdır (503). Bir qədər sonra yenidən cəhd edin.`
               : `${label} xidməti cavab vermədi (HTTP ${response.status}). Sonra yenidən cəhd edin.`,
     );
+  return response;
+}
+
+export async function modelJSON(instructions, input, name, schema) {
+  const provider = aiProvider();
+  const response = await modelResponse(instructions, input, name, schema);
   try {
     const data = await response.json();
     const candidate =
@@ -174,5 +188,57 @@ export async function translatePlot(plot) {
     );
     error.code = "AI_INVALID_OUTPUT";
     throw error;
+  }
+}
+
+export async function modelTools(instructions, input, tools) {
+  const response = await modelResponse(
+    instructions,
+    input,
+    "admin_tools",
+    undefined,
+    tools,
+  );
+  try {
+    const data = await response.json();
+    let calls, message;
+    if (aiProvider() === "groq") {
+      const choice = data.choices?.[0];
+      if (!choice || !["stop", "tool_calls"].includes(choice.finish_reason))
+        throw Error();
+      calls = (choice.message?.tool_calls || []).map((call) => ({
+        name: call.function?.name,
+        args: JSON.parse(call.function?.arguments || "{}"),
+      }));
+      message = choice.message?.content || "";
+    } else {
+      const candidate = data.candidates?.[0];
+      if (candidate?.finishReason !== "STOP") throw Error();
+      const parts = (candidate.content?.parts || []).filter((p) => !p.thought);
+      calls = parts
+        .filter((p) => p.functionCall)
+        .map((p) => ({ name: p.functionCall.name, args: p.functionCall.args }));
+      message = parts
+        .filter((p) => typeof p.text === "string")
+        .map((p) => p.text)
+        .join("");
+    }
+    if (
+      calls.length > 1 ||
+      typeof message !== "string" ||
+      message.length > 3000
+    )
+      throw Error();
+    for (const call of calls) {
+      const tool = tools.find((t) => t.function.name === call.name);
+      if (!tool || !matchesSchema(call.args, tool.function.parameters))
+        throw Error();
+    }
+    return { calls, message };
+  } catch {
+    throw new HttpError(
+      502,
+      "AI əməliyyatı düzgün hazırlamadı. Əmri daha dəqiq yazın; bazada dəyişiklik edilməyib.",
+    );
   }
 }

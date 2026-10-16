@@ -16,6 +16,7 @@ export function mountChat(
     busyText = "NOIR AI düşünür…",
     send,
     choose,
+    confirmPlan,
   },
 ) {
   let busy = false;
@@ -24,13 +25,63 @@ export function mountChat(
   const form = root.querySelector("form");
   const input = root.querySelector("textarea");
   const status = root.querySelector(".chat-status");
+  function renderPlan(plan, index) {
+    const rows = plan.items
+      .map((item) => {
+        const film = item.film;
+        return (
+          '<div class="chat-film">' +
+          (film?.poster
+            ? '<img src="' + esc(film.poster) + '" alt="" loading="lazy">'
+            : "") +
+          "<span><strong>" +
+          esc(film?.title || item.title) +
+          "</strong><small>" +
+          esc([film?.year, film?.director].filter(Boolean).join(" · ")) +
+          '</small><span class="chat-reason">' +
+          esc(
+            plan.cancelled
+              ? "Ləğv edildi; bazaya yazılmadı"
+              : item.status === "ready"
+                ? item.action === "update"
+                  ? "TMDB məlumatları yenilənəcək; süjet və rəf qorunacaq"
+                  : "Kolleksiyaya əlavə ediləcək"
+                : item.message,
+          ) +
+          "</span></span></div>"
+        );
+      })
+      .join("");
+    const pending =
+      confirmPlan && plan.token && !plan.completed && !plan.cancelled;
+    return (
+      '<div class="chat-films">' +
+      rows +
+      "</div>" +
+      (pending
+        ? '<div class="admin-actions"><button type="button" class="button primary" data-confirm-plan="' +
+          index +
+          '">Təsdiqlə və icra et (' +
+          plan.items.filter((x) => x.status === "ready").length +
+          ')</button><button type="button" class="button" data-cancel-plan="' +
+          index +
+          '">Ləğv et</button></div>'
+        : "<p>" +
+          (plan.cancelled
+            ? "Əməliyyat ləğv edildi."
+            : plan.completed
+              ? "Əməliyyatların nəticələri aşağıda göstərilir."
+              : "Yazılacaq əməliyyat yoxdur.") +
+          "</p>")
+    );
+  }
   function render() {
     log.innerHTML =
       `<article class="chat-message assistant"><span class="chat-avatar">${brandMark}</span><div><span class="chat-author">${esc(agentName)}</span><p>${esc(welcome)}</p></div></article>` +
       messages
         .map(
           (message, index) =>
-            `<article class="chat-message ${message.role}">${message.role === "assistant" ? `<span class="chat-avatar">${brandMark}</span>` : ""}<div><span class="chat-author">${message.role === "user" ? "Sən" : esc(agentName)}</span><p>${esc(message.text)}</p>${message.films?.length ? `<div class="chat-films">${message.films.map((film, filmIndex) => `<button type="button" class="chat-film" data-message="${index}" data-choice="${filmIndex}">${film.poster ? `<img src="${esc(film.poster)}" alt="" loading="lazy">` : `<span class="chat-poster-placeholder">${brandMark}</span>`}<span><strong>${esc(film.title)}</strong><small>${esc(film.year || "")} ${film.genre ? `· ${esc(film.genre)}` : ""}</small>${film.reason ? `<span class="chat-reason">${esc(film.reason)}</span>` : ""}</span>${icon("arrow")}</button>`).join("")}</div>` : ""}</div></article>`,
+            `<article class="chat-message ${message.role}">${message.role === "assistant" ? `<span class="chat-avatar">${brandMark}</span>` : ""}<div><span class="chat-author">${message.role === "user" ? "Sən" : esc(agentName)}</span><p>${esc(message.text)}</p>${message.plan ? renderPlan(message.plan, index) : ""}${message.films?.length ? `<div class="chat-films">${message.films.map((film, filmIndex) => `<button type="button" class="chat-film" data-message="${index}" data-choice="${filmIndex}">${film.poster ? `<img src="${esc(film.poster)}" alt="" loading="lazy">` : `<span class="chat-poster-placeholder">${brandMark}</span>`}<span><strong>${esc(film.title)}</strong><small>${esc(film.year || "")} ${film.genre ? `· ${esc(film.genre)}` : ""}</small>${film.reason ? `<span class="chat-reason">${esc(film.reason)}</span>` : ""}</span>${icon("arrow")}</button>`).join("")}</div>` : ""}</div></article>`,
         )
         .join("");
     log.querySelectorAll("img").forEach((img) => {
@@ -53,6 +104,22 @@ export function mountChat(
             render();
           }
         });
+    });
+    log.querySelectorAll("[data-confirm-plan]").forEach((button) => {
+      button.onclick = () =>
+        run(async () => {
+          const plan = messages[Number(button.dataset.confirmPlan)].plan;
+          const result = await confirmPlan(plan);
+          plan.completed = true;
+          messages.push({ role: "assistant", ...result });
+          if (root.isConnected) render();
+        });
+    });
+    log.querySelectorAll("[data-cancel-plan]").forEach((button) => {
+      button.onclick = () => {
+        messages[Number(button.dataset.cancelPlan)].plan.cancelled = true;
+        render();
+      };
     });
     log.scrollTop = log.scrollHeight;
   }

@@ -300,11 +300,11 @@ export function createAdmin({ modal, toast, esc, onCatalog, getDemoAdmin }) {
       esc,
       messages: assistantMessages,
       welcome:
-        "Kolleksiyanı birlikdə quraq. Filmlər barədə danışa, məsləhət istəyə və əlavə etmək istədiyin filmi axtara bilərsən. Film yalnız nəticə kartını seçəndə bazaya əlavə olunur.",
+        "Film əlavə etməyi, bir neçə film seçməyi və ya məlumat yeniləməyi yaz. TMDB məlumatları ilə siyahı hazırlayacağam; yalnız Təsdiqlə və icra et düyməsindən sonra bazaya yazılacaq.",
       context: "Admin studiyası · Kino söhbəti və film seçimi",
       suggestions: [
-        "Interstellar filmini əlavə et",
-        "The Godfather (1972) filmini əlavə et",
+        "Uzak (2002), Lost Highway (1997), Benny’s Video (1992), Caché (2005) filmlərini əlavə et",
+        "Christopher Nolanın 10 filmini əlavə et",
       ],
       placeholder: "Film əlavə etmək üçün yaz…",
       async send(command, history) {
@@ -324,12 +324,43 @@ export function createAdmin({ modal, toast, esc, onCatalog, getDemoAdmin }) {
         }
         return {
           text: data.message,
+          plan: data.plan,
           films: (data.results || []).map((film) => ({
             ...film,
             id: String(film.tmdbId),
             reason: "Kolleksiyaya əlavə etmək üçün seç",
           })),
         };
+      },
+      async confirmPlan(plan) {
+        const lines = [];
+        for (const item of plan.items.filter((x) => x.status === "ready")) {
+          try {
+            const result = await request("/api/admin/assistant/confirm", {
+              method: "POST",
+              data: { token: plan.token, index: item.index, confirm: true },
+            });
+            item.status = result.status;
+            item.message = result.message;
+            lines.push(result.message);
+          } catch (error) {
+            item.status = "failed";
+            item.message = "Əməliyyat təsdiqlənmədi: " + error.message;
+            lines.push(
+              (item.film?.title || item.title) +
+                " — əməliyyat təsdiqlənmədi: " +
+                error.message,
+            );
+          }
+        }
+        try {
+          await refresh();
+        } catch {
+          lines.push(
+            "Kolleksiyanın görünüşü yenilənmədi. Səhifəni yeniləyib nəticələri yoxlayın.",
+          );
+        }
+        return { text: lines.join("\n") };
       },
       async choose(film) {
         const result = await request("/api/admin/tmdb/add", {

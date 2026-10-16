@@ -119,7 +119,7 @@ Saytın teması qara/antrasit fon, isti qızılı vurğular və 3D DVD kino arxi
 
 **Saytdakı çat:** menyudakı **NOIR AI**, sağ altdakı **Bir film tapaq**, yaxud film məlumatındakı **Oxşar filmləri tap** düyməsindən açılır. Admin girişi tələb etmir. İstifadəçi sevdiyi filmi, janrı və ya əhvalını yazır; AI canlı kolleksiyadan ən çox 4 film və qısa səbəblər təklif edir. Film kartına toxunanda onun məlumatları açılır. Film səhifəsindən açılan çat seçilmiş filmi nəzərə alır. Çat bazaya yazmır; qaytarılan film ID-ləri serverdə kolleksiya ilə yoxlanılır. Son 8 mesaj sorğuya daxil edilir, söhbət daimi yaddaşa yazılmır. Mesajlar seçilmiş AI xidmətinə göndərilir.
 
-**Admin studiyası:** birbaşa `/admin.html` ünvanını açın. Əvvəlki təhlükəsiz admin hesabınızla daxil olun. **AI ilə söhbət** bölməsində filmlər, rejissorlar və kolleksiya barədə danışın. Son 8 mesaj nəzərə alınır; söhbət bu səhifənin yaddaşında saxlanır. Film əlavə etmək istəyəndə model TMDB axtarışı təklif edir; yalnız posterli nəticə kartını seçəndə film bazaya yazılır. Söhbət özbaşına SQL və ya server əmri icra etmir. **AI bağlantısını yoxla** real, kiçik provider sorğusu göndərir; konfiqurasiya bayrağı uğurlu AI bağlantısı kimi təqdim edilmir.
+**Admin studiyası:** birbaşa `/admin.html` ünvanında təhlükəsiz admin hesabı ilə daxil olun. **AI ilə söhbət** film əlavə etmə, toplu əlavə etmə, rejissor seçimi və metadata yeniləməsi üçün TMDB məlumatları ilə imzalanmış təsdiq siyahısı hazırlayır. **Təsdiqlə və icra et** seçilmədən film yazılmır. Hər nəticə real backend cavabından göstərilir. Aşağıdakı “AI admin əməliyyatları” bölməsinə baxın.
 
 **AI olmadan əlavə etmək:** **Film əlavə et** bölməsi birbaşa TMDB-də axtarır. Burada Gemini çağırılmır. Açıqlamaları **Azərbaycan dilində süjetlər → Çatışmayan süjetləri tamamla** ilə tərcümə edin və ya film redaktorunda yazın. Tərcümə bir filmə bir sorğu ilə, fasilələrlə gedir; xəta və ya dayandırma son tamamlanan filmləri itirmir. Mövcud açıqlamalar yenidən yazılmır. Google əlçatmazdırsa tərcümənin tamamlandığı iddia edilmir.
 
@@ -177,3 +177,14 @@ Film məlumatında **Treylerə bax** düyməsi NOIR pəncərəsində YouTube ple
 ### Posterə uyğun film rəngləri
 
 Siyahıdan və ya 3D rəfdən film açıldıqda posterin kiçik nüsxəsindən əsas və ikinci rəng seçilir. Arxa fon, sol poster hissəsi, sağ məlumat hissəsi və treyler sahəsi bu rənglərin tünd tonlarına uyğunlaşır; mətn açıq saxlanır. Analiz brauzerdə aparılır, AI sorğusu yoxdur. Ən çox 96 poster palitrası yaddaşda saxlanır. Poster yüklənməzsə, CORS icazəsi yoxdursa və ya rəng alınmazsa standart tünd palitra göstərilir. Gecikmiş poster cavabı başqa filmə və ya çata rəng tətbiq etmir; pəncərə bağlananda rənglər təmizlənir.
+
+
+## AI admin əməliyyatları
+
+Admin çatında Groq/Gemini native function calling ilə `prepare_film_additions`, `prepare_director_additions` və `prepare_film_update` alətləri var. Model yalnız serverdə əvvəlcədən müəyyən edilmiş bu alətləri seçir; SQL və ya database/API açarları modelə verilmir. Bir əmrdə ən çox 10 film hazırlanır.
+
+Məsələn: “Uzak (2002) — Nuri Bilge Ceylan filmini əlavə et”, “Bu 4 filmi kolleksiyaya əlavə et”, “Christopher Nolanın 10 filmini əlavə et”, “Uzak (2002) filminin məlumatlarını yenilə”. “Bu film” və ya “bu 4 film” tarixçədən dəqiq müəyyən edilmirsə ad/il dəqiqləşdirilməlidir. Rejissor seçimi TMDB-də yalnız Director kreditlərinə əsaslanır; uyğun filmlər populyarlıqla sıralanır.
+
+AI əvvəlcə TMDB-dən orijinal ad, il, rejissor və metadata ilə təsdiq siyahısı hazırlayır; bu addım filmlərə yazmır. Uyğunluq qeyri-müəyyəndirsə film avtomatik seçilmir. Artıq mövcud filmlər və bu sorğudakı təkrarlar ayrıca göstərilir. “Təsdiqlə və icra et” backend-in hər filmi ayrıca yazmasına başlayır. Təsdiq 15 dəqiqəlik imza ilə həmin admin sessiyasına bağlanır; hər `/api/admin/assistant/confirm` sorğusu autentifikasiya, CSRF və origin yoxlamasından keçir. İmzalanmış siyahı dəyişdirilə bilməz.
+
+Əlavə etmə TMDB unique indeksi ilə təkrara qarşı qorunur və orijinal ad/il də mövcud filmlərlə yoxlanılır. Yeniləmə rəfi, sıralamanı və mövcud süjeti saxlayır; təsdiqdən sonra film başqa yerdə dəyişərsə əməliyyat 409 ilə dayanır. Yazma və audit bir SQL ifadəsində aparılır. UI yalnız həqiqi backend nəticələrini göstərir; qismən uğursuzluqlar ayrı yazılır. Bu əməliyyatlarda AI süjet tərcüməsi çağırılmır, kvota xətası metadata əlavə etməyi saxlamır. Açıq sayt admin dəyişiklik bildirişində və geri qayıdarkən kolleksiyanı yenidən oxuyur, açıq film/3D baxışını yarıda kəsmir. Yeni sxem miqrasiyası tələb olunmur.

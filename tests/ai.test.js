@@ -143,10 +143,17 @@ test("admin conversation preserves discussion history and proposes searches with
     const input = JSON.parse(payload.contents[0].parts[0].text);
     assert.equal(input.history[0].text, "Elmi fantastika istəyirəm.");
     assert.equal(input.collection[0].title, "Interstellar");
-    return gemini({
-      text: "Arrival yaxşı seçimdir. Əlavə etmək üçün axtaraq?",
-      searchTitle: null,
-      year: null,
+    return Response.json({
+      candidates: [
+        {
+          finishReason: "STOP",
+          content: {
+            parts: [
+              { text: "Arrival yaxşı seçimdir. Əlavə etmək üçün axtaraq?" },
+            ],
+          },
+        },
+      ],
     });
   });
   const result = await adminConversation(
@@ -156,8 +163,8 @@ test("admin conversation preserves discussion history and proposes searches with
     },
     films,
   );
-  assert.equal(result.searchTitle, null);
-  assert.match(result.text, /Arrival/);
+  assert.equal(result.plan, undefined);
+  assert.match(result.message, /Arrival/);
 });
 
 test("missing Gemini key never calls an external provider", async (t) => {
