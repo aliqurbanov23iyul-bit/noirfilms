@@ -116,6 +116,9 @@ test("import tolerates invalid translations but preserves quota failures and can
   assert.equal(film.plot, "");
   assert.equal(film.translationStatus, "missing");
   quota = true;
+  const withoutAI = await movieTMDB(42, { translate: false });
+  assert.equal(withoutAI.title, "Fixture film");
+  assert.equal(withoutAI.translationStatus, "missing");
   await assert.rejects(
     movieTMDB(42, { tolerateInvalidTranslation: true }),
     (error) => error.status === 429,

@@ -166,8 +166,15 @@ export async function handler(req, res) {
         await audit(current.username, "import.start", job.id);
         return json(res, 200, { job });
       }
-      if (path === "/api/admin/import/step" && method === "POST")
-        return json(res, 200, { job: await importStep(identifier(b.id)) });
+      if (path === "/api/admin/import/step" && method === "POST") {
+        if (b.translate !== undefined && typeof b.translate !== "boolean")
+          throw new HttpError(400, "Tərcümə seçimi yanlışdır.");
+        return json(res, 200, {
+          job: await importStep(identifier(b.id), {
+            translate: b.translate !== false,
+          }),
+        });
+      }
       throw new HttpError(405, "Bu əməliyyat dəstəklənmir.");
     }
     if (

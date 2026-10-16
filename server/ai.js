@@ -72,6 +72,11 @@ export async function modelJSON(instructions, input, name, schema) {
   } catch {
     throw new HttpError(502, "Gemini bağlantısı alınmadı. Yenidən cəhd edin.");
   }
+  if (!response.ok)
+    console.warn(
+      "NOIR_AI_REQUEST_FAILED",
+      JSON.stringify({ status: response.status, operation: name }),
+    );
   if (response.status === 429) {
     const seconds = Number(response.headers.get("retry-after"));
     const error = new HttpError(
@@ -91,7 +96,9 @@ export async function modelJSON(instructions, input, name, schema) {
         ? "Gemini açarı və ya giriş icazəsi qəbul edilmədi. Server açarını yoxlayın."
         : response.status === 404
           ? "Seçilmiş Gemini modeli bu hesab üçün əlçatan deyil. Model ayarını yoxlayın."
-          : "AI xidməti cavab vermədi. Sonra yenidən cəhd edin.",
+          : response.status === 400
+            ? "Gemini sorğusunun parametrləri qəbul edilmədi (HTTP 400). İmportu AI tərcüməsi olmadan davam etdirə bilərsiniz."
+            : `Gemini xidməti cavab vermədi (HTTP ${response.status}). Sonra yenidən cəhd edin.`,
     );
   try {
     const data = await response.json();

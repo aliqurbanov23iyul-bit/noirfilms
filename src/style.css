@@ -11,6 +11,33 @@
   --surface: #151518;
   --line: #ffffff15;
 }
+.import-translation-choice {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  margin: 18px 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  cursor: pointer;
+}
+.import-translation-choice input {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  margin: 5px 0 0;
+  accent-color: var(--gold);
+}
+.import-translation-choice span {
+  font-size: 14px;
+}
+.import-translation-choice small {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.7;
+}
 * {
   box-sizing: border-box;
 }

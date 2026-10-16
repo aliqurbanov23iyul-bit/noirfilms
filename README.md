@@ -94,6 +94,7 @@ Admin hesabına daxil olun → **TOP 500 importu** → importu başladın.
 - TMDB ID-si unikal olduğundan təkrar cəhdlər eyni filmi çoxaltmır. Aktiv import davam etdirilir.
 - Brauzeri bağlamaq və ya dayandırmaq son təsdiqlənmiş addımı itirmir. Cari sorğu bitdikdən sonra dayanır.
 - Davam etdirmək yeni import üçün saatlıq limiti istifadə etmir. Filmlər arasında ən azı 2.5 saniyə fasilə var; bu fasilə provayderin bütün kvotalarına zəmanət vermir.
+- **İmport zamanı süjetləri AI ilə tərcümə et** seçimi standart olaraq bağlıdır. Beləliklə Gemini əlçatmaz olsa da, eyni importu TMDB ilə davam etdirmək mümkündür. Bu halda TMDB-nin Azərbaycan dilində süjeti saxlanır, digərləri boş/missing qalır. Seçim NOIR AI çatlarını söndürmür. Provayder uğursuzluqlarında Vercel Logs-a yalnız HTTP statusu və əməliyyat adı yazılır; açar, süjet, provayder cavabı və istifadəçi mesajı yazılmır.
 - Gemini natamam və ya yanlış formatlı süjet qaytarsa, film digər məlumatlarla saxlanır, süjet boş və tərcümə statusu `missing` qalır; panel çatışmayan tərcümə sayını göstərir. Gemini kvotası və ya açar problemi importu saxlayır, son uğurlu addım qorunur. Yerli limitdə təxmini gözləmə müddəti göstərilir, 429 cavablarında `Retry-After` başlığı var.
 - İki serverin eyni addımı paralel icra etməməsi üçün bazada vaxtlı iş kilidi var.
 - TMDB-nin Azərbaycan dilində süjeti varsa istifadə olunur. Yoxdursa Gemini qoşulduqda tərcümə edilir. AI yoxdursa süjet boş saxlanır və interfeys tərcümənin hazır olmadığını bildirir; ingiliscə süjet Azərbaycan dili kimi göstərilmir.

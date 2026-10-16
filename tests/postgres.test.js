@@ -148,8 +148,9 @@ test("PostgreSQL migration, CRUD, shelves, rate limits and resumable TOP 500 imp
       0,
       "quota failure must not advance the manifest",
     );
+    // The same frozen job can move forward without Gemini even while its quota is exhausted.
+    const progress = await importStep(job.id, { translate: false });
     aiQuota = false;
-    const progress = await importStep(job.id);
     delete process.env.GEMINI_API_KEY;
     assert.equal(progress.cursor, 1);
     assert.equal(progress.imported, 1);
