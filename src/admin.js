@@ -287,7 +287,7 @@ export function createAdmin({ modal, toast, esc, onCatalog, getDemoAdmin }) {
   }
   function assistant() {
     modal(
-      `<div class="chat-heading"><div><div class="eyebrow">ADMİN KÖMƏKÇİSİ · GEMINI + TMDB</div><h2>Rəfinə yeni hekayə əlavə et.</h2></div><span class="chat-badge">${icon("spark")} NOIR AI</span></div><div id="admin-chat-root"></div><button class="text-button" id="back-dashboard">← İdarəetməyə qayıt</button>`,
+      `<div class="chat-heading"><div><div class="eyebrow">ADMİN KÖMƏKÇİSİ · NOIR AI + TMDB</div><h2>Rəfinə yeni hekayə əlavə et.</h2></div><span class="chat-badge">${icon("spark")} NOIR AI</span></div><div id="admin-chat-root"></div><button class="text-button" id="back-dashboard">← İdarəetməyə qayıt</button>`,
       "ai-chat-panel",
     );
     $("#back-dashboard").onclick = dashboard;
@@ -305,7 +305,7 @@ export function createAdmin({ modal, toast, esc, onCatalog, getDemoAdmin }) {
       async send(command, history) {
         if (!capabilities.ai)
           throw Error(
-            "Gemini server açarı əlavə edilməlidir. TMDB axtarışı ilə AI olmadan film əlavə edə bilərsiniz.",
+            "AI server açarı əlavə edilməlidir. TMDB axtarışı ilə AI olmadan film əlavə edə bilərsiniz.",
           );
         const data = await request("/api/admin/assistant", {
           method: "POST",
@@ -338,13 +338,13 @@ export function createAdmin({ modal, toast, esc, onCatalog, getDemoAdmin }) {
     const tools = document.createElement("div");
     tools.className = "admin-actions";
     tools.innerHTML =
-      '<button class="button" id="check-gemini">Gemini bağlantısını yoxla</button><button class="button" id="tmdb-without-ai">AI olmadan film əlavə et</button><p id="admin-message" role="status"></p>';
+      '<button class="button" id="check-gemini">AI bağlantısını yoxla</button><button class="button" id="tmdb-without-ai">AI olmadan film əlavə et</button><p id="admin-message" role="status"></p>';
     $("#admin-chat-root").after(tools);
     $("#tmdb-without-ai").onclick = searchView;
     $("#check-gemini").onclick = (event) =>
       operation(event.currentTarget, async () => {
         $("#admin-message").textContent =
-          "Gemini yoxlanılır. Bu, 42 saniyəyədək çəkə bilər…";
+          "AI yoxlanılır. Bu, 42 saniyəyədək çəkə bilər…";
         const response = await request("/api/admin/ai/check", {
           method: "POST",
           data: {},
@@ -401,7 +401,7 @@ export function createAdmin({ modal, toast, esc, onCatalog, getDemoAdmin }) {
     const { films } = await refresh();
     const missing = films.filter((film) => !film.plot?.trim() && film.tmdbId);
     modal(
-      `<div class="eyebrow">AZƏRBAYCAN DİLİNDƏ SÜJETLƏR</div><h2>Hər filmin öz hekayəsi.</h2><p class="body-copy">${missing.length} filmin süjeti tərcümə gözləyir. Hazır mətnlər və redaktorun yazdığı açıqlamalar dəyişdirilmir.</p><div class="admin-actions"><button class="button primary" id="translate-plots" ${!missing.length ? "disabled" : ""}>Çatışmayan süjetləri tamamla</button><button class="button" id="stop-translations">Dayandır</button><button class="button" id="back-dashboard">Geri</button></div><p id="translation-progress" role="status"></p><p id="admin-message" role="status"></p><p class="body-copy secondary">Gemini əlçatmaz olarsa proses saxlanır. Kolleksiya bölməsində Redaktə seçərək açıqlamanı özünüz də Azərbaycan dilində yaza bilərsiniz.</p>`,
+      `<div class="eyebrow">AZƏRBAYCAN DİLİNDƏ SÜJETLƏR</div><h2>Hər filmin öz hekayəsi.</h2><p class="body-copy">${missing.length} filmin süjeti tərcümə gözləyir. Hazır mətnlər və redaktorun yazdığı açıqlamalar dəyişdirilmir.</p><div class="admin-actions"><button class="button primary" id="translate-plots" ${!missing.length ? "disabled" : ""}>Çatışmayan süjetləri tamamla</button><button class="button" id="stop-translations">Dayandır</button><button class="button" id="back-dashboard">Geri</button></div><p id="translation-progress" role="status"></p><p id="admin-message" role="status"></p><p class="body-copy secondary">AI əlçatmaz olarsa proses saxlanır. Kolleksiya bölməsində Redaktə seçərək açıqlamanı özünüz də Azərbaycan dilində yaza bilərsiniz.</p>`,
     );
     const progress = $("#translation-progress");
     let stop = false;
@@ -456,7 +456,7 @@ export function createAdmin({ modal, toast, esc, onCatalog, getDemoAdmin }) {
     const importMeter = $("#import-meter");
     const translationChoice = document.createElement("label");
     translationChoice.className = "import-translation-choice";
-    translationChoice.innerHTML = `<input id="import-translate" type="checkbox" ${capabilities.ai ? "" : "disabled"}><span>İmport zamanı süjetləri AI ilə tərcümə et<small>Bağlı saxlasanız, Gemini sorğusu göndərilmir. TMDB-də Azərbaycan dilində süjet varsa götürülür; qalanları sonra tamamlamaq olar. NOIR AI çatları aktiv qalır.</small></span>`;
+    translationChoice.innerHTML = `<input id="import-translate" type="checkbox" ${capabilities.ai ? "" : "disabled"}><span>İmport zamanı süjetləri AI ilə tərcümə et<small>Bağlı saxlasanız, AI sorğusu göndərilmir. TMDB-də Azərbaycan dilində süjet varsa götürülür; qalanları sonra tamamlamaq olar. NOIR AI çatları aktiv qalır.</small></span>`;
     importMeter.closest(".import-progress").before(translationChoice);
     const warning = document.createElement("p");
     warning.className = "body-copy secondary";

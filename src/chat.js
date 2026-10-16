@@ -12,7 +12,7 @@ export function mountChat(
     placeholder,
     context = "",
     agentName = "NOIR AI",
-    footnote = "Gemini ilə · AI səhv edə bilər. Seçimləri yoxlayın.",
+    footnote = "AI ilə · AI səhv edə bilər. Seçimləri yoxlayın.",
     busyText = "NOIR AI düşünür…",
     send,
     choose,
@@ -130,7 +130,7 @@ export function createCinemaChat({ modal, esc, onFilm }) {
     if ((film?.id || null) !== selectedId) messages = [];
     selectedId = film?.id || null;
     modal(
-      `<div class="chat-heading"><div><div class="eyebrow">SƏNİN KİNO BƏLƏDÇİN</div><h2>Bu axşam hansı hekayə?</h2></div><span class="chat-badge">${icon("spark")} GEMINI</span></div><div id="cinema-chat-root"></div>`,
+      `<div class="chat-heading"><div><div class="eyebrow">SƏNİN KİNO BƏLƏDÇİN</div><h2>Bu axşam hansı hekayə?</h2></div><span class="chat-badge">${icon("spark")} NOIR AI</span></div><div id="cinema-chat-root"></div>`,
       "ai-chat-panel",
     );
     mountChat(document.querySelector("#cinema-chat-root"), {
