@@ -1789,3 +1789,68 @@ form label,
     font-size: 14px;
   }
 }
+
+/* Poster colours are scoped to the current film dialog. */
+.overlay.film-atmosphere {
+  background:
+    radial-gradient(
+      ellipse at 12% 22%,
+      rgb(var(--film-primary) / 0.38),
+      transparent 65%
+    ),
+    radial-gradient(
+      ellipse at 90% 80%,
+      rgb(var(--film-secondary) / 0.32),
+      transparent 65%
+    ),
+    #030508e8;
+}
+.film-atmosphere .film-panel {
+  background: rgb(var(--film-right));
+  border-color: rgb(var(--film-accent) / 0.22);
+  box-shadow: 0 30px 110px rgb(var(--film-primary) / 0.2);
+}
+.film-atmosphere .detail-art {
+  background:
+    radial-gradient(
+      ellipse at 20% 12%,
+      rgb(var(--film-primary) / 0.5),
+      transparent 75%
+    ),
+    linear-gradient(145deg, rgb(var(--film-left)), rgb(var(--film-right)));
+}
+.film-atmosphere .detail-content {
+  background:
+    radial-gradient(
+      ellipse at 100% 0%,
+      rgb(var(--film-secondary) / 0.12),
+      transparent 65%
+    ),
+    rgb(var(--film-right));
+}
+.film-atmosphere .detail-content .eyebrow,
+.film-atmosphere .poster-note,
+.film-atmosphere .detail-content .text-button {
+  color: rgb(var(--film-accent));
+}
+.film-atmosphere .detail-content .button.primary {
+  background: rgb(var(--film-accent));
+  color: #0c1017;
+  border-color: rgb(var(--film-accent));
+}
+.film-atmosphere .detail-content .plot,
+.film-atmosphere .detail-content dd,
+.film-atmosphere .detail-content h2 {
+  color: #f6f7fa;
+}
+.film-atmosphere .detail-content dt,
+.film-atmosphere .film-meta {
+  color: #c6cad3;
+}
+.film-atmosphere .trailer-player {
+  background: linear-gradient(
+    130deg,
+    rgb(var(--film-left)),
+    rgb(var(--film-right))
+  );
+}

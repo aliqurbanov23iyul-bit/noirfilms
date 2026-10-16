@@ -172,3 +172,8 @@ Toplu tərcümələr arasında 15 saniyə fasilə var. 429 zamanı serverin `Ret
 ### Sayt daxilində treyler
 
 Film məlumatında **Treylerə bax** düyməsi NOIR pəncərəsində YouTube pleyerini açır; ayrıca YouTube səhifəsinə keçid verilmir. Pleyer yalnız düyməyə basıldıqda yüklənir, tam ekran və mobil inline baxış dəstəklənir. Treyleri bağlamaq, film pəncərəsini bağlamaq və ya 3D qutuya qayıtmaq iframe-i silərək səsi də dayandırır. Treyler ID-si yoxdursa düymə bağlıdır. Video sahibinin embed və region məhdudiyyətləri yenə tətbiq olunur; bütün videoların oynadılmasına zəmanət verilmir.
+
+
+### Posterə uyğun film rəngləri
+
+Siyahıdan və ya 3D rəfdən film açıldıqda posterin kiçik nüsxəsindən əsas və ikinci rəng seçilir. Arxa fon, sol poster hissəsi, sağ məlumat hissəsi və treyler sahəsi bu rənglərin tünd tonlarına uyğunlaşır; mətn açıq saxlanır. Analiz brauzerdə aparılır, AI sorğusu yoxdur. Ən çox 96 poster palitrası yaddaşda saxlanır. Poster yüklənməzsə, CORS icazəsi yoxdursa və ya rəng alınmazsa standart tünd palitra göstərilir. Gecikmiş poster cavabı başqa filmə və ya çata rəng tətbiq etmir; pəncərə bağlananda rənglər təmizlənir.
