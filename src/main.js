@@ -500,6 +500,22 @@ chatLauncher.setAttribute("aria-label", "NOIR AI kino çatını aç");
 chatLauncher.onclick = () => cinemaChat.open();
 document.body.append(chatLauncher);
 
+const footer = $("footer");
+let footerVisible = false;
+function updateChatClearance() {
+  document.documentElement.style.setProperty(
+    "--chat-footer-clearance",
+    footerVisible
+      ? `${Math.ceil(footer.getBoundingClientRect().height)}px`
+      : "0px",
+  );
+}
+new IntersectionObserver(([entry]) => {
+  footerVisible = entry.isIntersecting;
+  updateChatClearance();
+}).observe(footer);
+new ResizeObserver(updateChatClearance).observe(footer);
+
 document.addEventListener("keydown", (e) => {
   if (!$("#overlay").classList.contains("hidden")) {
     if (e.key === "Escape") {

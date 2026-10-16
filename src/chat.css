@@ -8,7 +8,9 @@
 .chat-launcher {
   position: fixed;
   right: 28px;
-  bottom: 24px;
+  bottom: calc(
+    24px + env(safe-area-inset-bottom, 0px) + var(--chat-footer-clearance, 0px)
+  );
   z-index: 19;
   display: flex;
   align-items: center;
@@ -334,7 +336,10 @@
   }
   .chat-launcher {
     right: 14px;
-    bottom: 14px;
+    bottom: calc(
+      14px + env(safe-area-inset-bottom, 0px) +
+        var(--chat-footer-clearance, 0px)
+    );
     padding: 11px 14px;
     gap: 9px;
   }
