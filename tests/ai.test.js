@@ -80,8 +80,13 @@ test("Gemini uses a server header and structured JSON for admin intent and trans
     assert.equal(options.headers["x-goog-api-key"], "fixture-gemini-secret");
     assert.equal(String(url).includes("secret"), false);
     const payload = JSON.parse(options.body);
-    assert.equal(payload.generationConfig.responseMimeType, "application/json");
-    assert.ok(payload.generationConfig.responseJsonSchema.required.length);
+    assert.equal(
+      payload.generationConfig.responseMimeType,
+      calls === 1 ? "application/json" : "text/plain",
+    );
+    if (calls === 1)
+      assert.ok(payload.generationConfig.responseJsonSchema.required.length);
+    else assert.equal(payload.generationConfig.responseJsonSchema, undefined);
     assert.ok(payload.systemInstruction.parts[0].text);
     assert.equal(payload.tools, undefined);
     return gemini(
@@ -369,4 +374,45 @@ test("public chat works without admin credentials and enforces origin and durabl
     admin,
   );
   assert.equal(admin.statusCode, 503);
+});
+
+test("plain-text translations and fenced JSON chat replies are accepted, incomplete translations are rejected", async (t) => {
+  setup(t);
+  const reply = (text, finishReason = "STOP") =>
+    Response.json({
+      candidates: [{ finishReason, content: { parts: [{ text }] } }],
+    });
+  t.mock.method(globalThis, "fetch", async () =>
+    reply("Azərbaycan dilində tamamlanmış süjet."),
+  );
+  assert.equal(
+    await translatePlot("Source plot"),
+    "Azərbaycan dilində tamamlanmış süjet.",
+  );
+  t.mock.method(globalThis, "fetch", async () =>
+    reply(
+      String.fromCharCode(96).repeat(3) +
+        "json\n" +
+        JSON.stringify({
+          text: "Salam! Hansı filmləri sevirsən?",
+          recommendations: [],
+        }) +
+        "\n" +
+        String.fromCharCode(96).repeat(3),
+    ),
+  );
+  const result = await recommendChat([], chatInput({ message: "Salam" }));
+  assert.match(result.text, /Salam/);
+  assert.deepEqual(result.films, []);
+  for (const [text, reason] of [
+    ["Yarımçıq süjet", "MAX_TOKENS"],
+    ["", "STOP"],
+    ['{"plot":42}', "STOP"],
+  ]) {
+    t.mock.method(globalThis, "fetch", async () => reply(text, reason));
+    await assert.rejects(
+      translatePlot("Source"),
+      (error) => error.code === "AI_INVALID_OUTPUT",
+    );
+  }
 });

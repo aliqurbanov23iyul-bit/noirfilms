@@ -67,7 +67,7 @@ function write(key, value) {
 document.documentElement.lang = "az";
 document.title = "NOIR CINEMA — Kino rəfiniz";
 $("#app").innerHTML =
-  `<div id="loader" aria-live="polite"><div class="logo">${brandLogo}</div><div class="load-line"></div><p>Kino məkanınız hazırlanır</p></div><header class="header"><a class="logo" href="/" aria-label="NOIR CINEMA — əsas səhifə">${brandLogo}</a><nav aria-label="Əsas menyu"><button class="nav-link active" id="collection">Kolleksiya</button><button class="nav-link" id="picks">Kolleksiyam <span id="saved-count">${saved.length}</span></button><button class="nav-link" id="about">Haqqında</button></nav><button class="icon-button" id="admin" aria-label="İdarəetmə mərkəzi" title="İdarəetmə mərkəzi">${icon("settings")}</button></header><main><section class="intro"><div><div class="eyebrow"><span></span> KİNONUN ÖZ MƏKANI</div><h1>Kinonun <span>içindəsən.</span></h1></div><p>Otağa daxil ol. Rəflərə göz gəzdir.<br> Növbəti hekayəni özün seç.</p></section><section class="archive" aria-label="Film arxivi"><div class="toolbar"><label class="search-box">${icon("search")}<input id="search" type="search" placeholder="Film və ya rejissor axtar…" aria-label="Film və ya rejissor axtar"></label><label class="genre-control">${icon("filter")}<select id="genre" aria-label="Janr seç"><option value="">Bütün janrlar</option>${catalogGenres(
+  `<div id="loader" aria-live="polite"><div class="logo">${brandLogo}</div><div class="load-line"></div><p>Kino məkanınız hazırlanır</p></div><header class="header"><a class="logo" href="/" aria-label="NOIR CINEMA — əsas səhifə">${brandLogo}</a><nav aria-label="Əsas menyu"><button class="nav-link active" id="collection">Kolleksiya</button><button class="nav-link" id="picks">Kolleksiyam <span id="saved-count">${saved.length}</span></button><button class="nav-link" id="about">Haqqında</button></nav></header><main><section class="intro"><div><div class="eyebrow"><span></span> KİNONUN ÖZ MƏKANI</div><h1>Kinonun <span>içindəsən.</span></h1></div><p>Otağa daxil ol. Rəflərə göz gəzdir.<br> Növbəti hekayəni özün seç.</p></section><section class="archive" aria-label="Film arxivi"><div class="toolbar"><label class="search-box">${icon("search")}<input id="search" type="search" placeholder="Film və ya rejissor axtar…" aria-label="Film və ya rejissor axtar"></label><label class="genre-control">${icon("filter")}<select id="genre" aria-label="Janr seç"><option value="">Bütün janrlar</option>${catalogGenres(
     films,
   )
     .map((g) => `<option>${esc(g)}</option>`)
@@ -257,7 +257,7 @@ async function select(f, skipAnimation = false) {
     $("#case-status").classList.add("hidden");
   }
   modal(
-    `<div class="detail-art"><img class="detail-poster" src="${esc(f.poster)}" alt="${esc(f.title)} — film posteri"><span class="poster-note">NOIR SEÇİMİ · KİNO ARXİVİ</span></div><div class="detail-content"><div class="eyebrow">HEKAYƏYƏ YAXINLAŞIN</div><h2>${esc(f.title)}</h2><div class="film-meta"><span>${f.year}</span><i></i><span>${esc(f.genre)}</span><span class="rating"><b>${esc(f.ratingSource || "IMDb")}</b> ★ ${f.rating}</span></div><p class="plot">${esc(f.plot || "Bu film üçün Azərbaycan dilində süjet hələ əlavə edilməyib.")}</p><dl class="credits"><div><dt>Rejissor</dt><dd>${esc(f.director)}</dd></div><div><dt>Aktyorlar</dt><dd>${esc(f.cast)}</dd></div></dl><div class="detail-actions"><a class="button primary" href="https://www.youtube.com/watch?v=${encodeURIComponent(f.trailer)}" target="_blank" rel="noopener">${icon("play")} Treylerə bax</a><button class="button" id="save">${icon(saved.includes(f.id) ? "check" : "heart")} ${saved.includes(f.id) ? "Kolleksiyamdadır" : "Kolleksiyama əlavə et"}</button></div><button class="text-button inspect-case" id="inspect-case">Açılmış 3D qutuya bax →</button><div class="ai-actions"><button id="analyze">${icon("spark")} AI ilə analiz et</button><button id="similar">Oxşar filmləri tap ${icon("arrow")}</button></div><div id="result" class="result" aria-live="polite"></div><p class="metadata-note">${liveCatalog ? "TMDB və redaktor məlumatları · Reytinqlər zamanla dəyişir." : "Yerli nümayiş kolleksiyası · Canlı TOP 500 deyil."}</p></div>`,
+    `<div class="detail-art"><img class="detail-poster" src="${esc(f.poster)}" alt="${esc(f.title)} — film posteri"><span class="poster-note">NOIR SEÇİMİ · KİNO ARXİVİ</span></div><div class="detail-content"><div class="eyebrow">HEKAYƏYƏ YAXINLAŞIN</div><h2>${esc(f.title)}</h2><div class="film-meta"><span>${f.year}</span><i></i><span>${esc(f.genre)}</span><span class="rating"><b>${esc(f.ratingSource || "IMDb")}</b> ★ ${f.rating}</span></div><p class="plot">${esc(f.plot || "Bu film üçün Azərbaycan dilində süjet hələ əlavə edilməyib.")}</p><dl class="credits"><div><dt>Rejissor</dt><dd>${esc(f.director)}</dd></div><div><dt>Aktyorlar</dt><dd>${esc(f.cast)}</dd></div></dl><div class="detail-actions"><a class="button primary" href="https://www.youtube.com/watch?v=${encodeURIComponent(f.trailer)}" target="_blank" rel="noopener">${icon("play")} Treylerə bax</a><button class="button" id="save">${icon(saved.includes(f.id) ? "check" : "heart")} ${saved.includes(f.id) ? "Kolleksiyamdadır" : "Kolleksiyama əlavə et"}</button></div><button class="text-button inspect-case" id="inspect-case">Açılmış 3D qutuya bax →</button><div class="ai-actions"><button id="analyze">${icon("spark")} AI ilə analiz et</button><button id="similar">Oxşar filmləri tap ${icon("arrow")}</button></div><div id="result" class="result" aria-live="polite"></div><p class="metadata-note">${liveCatalog ? "Film məlumatları · Reytinqlər zamanla dəyişir." : "Yerli nümayiş kolleksiyası · Canlı TOP 500 deyil."}</p></div>`,
     "film-panel",
   );
   if (!f.trailer) {
@@ -345,7 +345,7 @@ $("#collection").onclick = () => {
 };
 $("#about").onclick = () =>
   modal(
-    '<div class="eyebrow">NOIR HAQQINDA</div><h2>Kino üçün<br>ayrılmış bir məkan.</h2><p class="body-copy">NOIR CINEMA fiziki film kolleksiyasını kəşf etməyin zövqündən ilhamlanır. Sevdiyiniz hekayəyə qayıdın, yeni bir rejissorla tanış olun və ya seçimi təsadüfə buraxın.</p><p class="body-copy secondary">Bu, nümunə film məlumatları ilə hazırlanmış nümayiş platformasıdır. Poster hüquqları müvafiq sahiblərinə məxsusdur. Kolleksiyanız və demo dəyişiklikləri yalnız istifadə etdiyiniz brauzerdə saxlanır.</p>',
+    '<div class="eyebrow">NOIR HAQQINDA</div><h2>Kino üçün<br>ayrılmış bir məkan.</h2><p class="body-copy">NOIR CINEMA fiziki film kolleksiyasını kəşf etməyin zövqündən ilhamlanır. Sevdiyiniz hekayəyə qayıdın, yeni bir rejissorla tanış olun və ya seçimi təsadüfə buraxın.</p><p class="body-copy secondary">Rəfləri kəşf edin və NOIR AI ilə zövqünüzə uyğun film tapın. Poster hüquqları müvafiq sahiblərinə məxsusdur. Şəxsi film seçimləriniz bu brauzerdə saxlanır.</p>',
   );
 $("#picks").onclick = () => {
   const items = films.filter((f) => saved.includes(f.id));
@@ -354,131 +354,9 @@ $("#picks").onclick = () => {
   );
   bindFilms($("#content"));
 };
-function persist() {
-  write("noir-films", films);
-  const selectedGenre = $("#genre").value;
-  $("#genre").innerHTML =
-    '<option value="">Bütün janrlar</option>' +
-    catalogGenres(films)
-      .map((g) => `<option>${esc(g)}</option>`)
-      .join("");
-  $("#genre").value = selectedGenre;
-  genre = $("#genre").value;
-  filter();
-}
-function confirmAction(message, action) {
-  modal(
-    `<div class="eyebrow">DƏYİŞİKLİYİ TƏSDİQLƏYİN</div><h2>${esc(message)}</h2><p class="body-copy secondary">Bu əməliyyat yalnız bu brauzerdəki nümayiş kolleksiyasına aiddir.</p><div class="admin-actions"><button class="button primary" id="confirm-action">Bəli, davam et</button><button class="button" id="cancel-action">Ləğv et</button></div>`,
-  );
-  $("#confirm-action").onclick = action;
-  $("#cancel-action").onclick = admin;
-}
-function admin() {
-  if (liveCatalog) {
-    toast("Canlı bazada yerli demo redaktoru açılmır.");
-    return;
-  }
-  modal(
-    `<div class="eyebrow">YERLİ NÜMAYİŞ REJİMİ</div><h2>Kolleksiyanı idarə et.</h2><p class="body-copy secondary">Dəyişikliklər yalnız bu brauzerdə saxlanır. Server autentifikasiyası və verilənlər bazası hələ qoşulmayıb.</p><div class="admin-actions"><button class="button primary" id="add-film">+ Film əlavə et</button><button class="button" id="reset">Nümunələri bərpa et</button></div><div class="admin-list">${films.map((f, i) => `<div class="admin-row"><span>${esc(f.title)}<small>${f.year}</small></span><div><button data-up="${i}" ${i === 0 ? "disabled" : ""} aria-label="${esc(f.title)} — yuxarı köçür">↑</button><button data-down="${i}" ${i === films.length - 1 ? "disabled" : ""} aria-label="${esc(f.title)} — aşağı köçür">↓</button><button data-edit="${i}">Redaktə</button><button data-delete="${i}" class="danger">Sil</button></div></div>`).join("")}</div>`,
-  );
-  $("#add-film").onclick = () => editFilm();
-  $("#reset").onclick = () => {
-    confirmAction(
-      "Yerli dəyişikliklər silinsin və nümunələr bərpa edilsin?",
-      () => {
-        films = structuredClone(seed);
-        persist();
-        admin();
-      },
-    );
-  };
-  $("#content")
-    .querySelectorAll("[data-edit]")
-    .forEach((b) => (b.onclick = () => editFilm(Number(b.dataset.edit))));
-  $("#content")
-    .querySelectorAll("[data-delete]")
-    .forEach(
-      (b) =>
-        (b.onclick = () => {
-          confirmAction("Film yerli kolleksiyadan silinsin?", () => {
-            films.splice(Number(b.dataset.delete), 1);
-            persist();
-            admin();
-          });
-        }),
-    );
-  for (const direction of ["up", "down"])
-    $("#content")
-      .querySelectorAll(`[data-${direction}]`)
-      .forEach(
-        (b) =>
-          (b.onclick = () => {
-            const i = Number(b.dataset[direction]),
-              j = i + (direction === "up" ? -1 : 1);
-            if (j >= 0 && j < films.length) {
-              [films[i], films[j]] = [films[j], films[i]];
-              persist();
-              admin();
-            }
-          }),
-      );
-}
-const labels = {
-  title: "Film adı",
-  year: "Buraxılış ili",
-  genre: "Janr",
-  director: "Rejissor",
-  cast: "Aktyorlar",
-  plot: "Qısa süjet",
-  rating: "IMDb reytinqi",
-  poster: "Poster keçidi (https:// və ya /)",
-  trailer: "YouTube video identifikatoru",
-};
-function editFilm(index) {
-  const f = films[index] || {
-    title: "",
-    year: 2026,
-    genre: "Dram",
-    director: "",
-    cast: "",
-    plot: "",
-    rating: 0,
-    poster: "",
-    trailer: "",
-  };
-  modal(
-    `<div class="eyebrow">YERLİ FİLM REDAKTORU</div><h2>${index === undefined ? "Yeni hekayə əlavə et." : "Film məlumatları."}</h2><form id="film-form">${Object.keys(
-      labels,
-    )
-      .map(
-        (k) =>
-          `<label>${labels[k]}${k === "plot" ? `<textarea name="plot" rows="4">${esc(f[k])}</textarea>` : `<input name="${k}" value="${esc(f[k])}" ${["title", "year", "genre", "director", "poster"].includes(k) ? "required" : ""} ${k === "year" ? 'type="number" min="1888" max="2100"' : k === "rating" ? 'type="number" min="0" max="10" step="0.1"' : k === "poster" ? 'type="text" pattern="(https://|/).*"' : ""}>`}</label>`,
-      )
-      .join(
-        "",
-      )}<div class="admin-actions"><button class="button primary">Dəyişiklikləri saxla</button><button type="button" class="button" id="cancel-edit">Geri qayıt</button></div></form>`,
-  );
-  $("#cancel-edit").onclick = admin;
-  $("#film-form").onsubmit = (e) => {
-    e.preventDefault();
-    const value = Object.fromEntries(new FormData(e.target));
-    value.year = Number(value.year);
-    value.rating = Number(value.rating);
-    value.id = f.id || crypto.randomUUID();
-    if (index === undefined) films.push(value);
-    else films[index] = value;
-    persist();
-    admin();
-    toast("Film məlumatları saxlanıldı.");
-  };
-}
-$("#admin").onclick = () => {
-  window.location.href = "/admin.html";
-};
 const cinemaChat = createCinemaChat({
   modal,
   esc,
-  isLive: () => liveCatalog,
   onFilm: (film) => select(film),
 });
 const chatNav = document.createElement("button");
@@ -614,8 +492,3 @@ expandRoom.onclick = () => {
   expandRoom.setAttribute("aria-pressed", String(expanded));
   room.resize();
 };
-const roomAdmin = document.createElement("button");
-roomAdmin.className = "text-button room-studio";
-roomAdmin.textContent = "İdarəetmə";
-roomAdmin.onclick = () => $("#admin").click();
-$(".room-options").append(roomAdmin);

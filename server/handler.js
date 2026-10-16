@@ -249,6 +249,9 @@ export async function handler(req, res) {
       res.setHeader("Retry-After", String(error.retryAfter));
     // Do not leak SQL, connection strings, provider responses or secrets.
     return json(res, error instanceof HttpError ? error.status : 500, {
+      ...(error instanceof HttpError && error.code === "AI_INVALID_OUTPUT"
+        ? { code: error.code }
+        : {}),
       message:
         error instanceof HttpError
           ? error.message
