@@ -1,3 +1,4 @@
+import { loadPosterPalette, themeVariables } from "./poster-theme.js";
 import { gsap } from "gsap";
 import { films as originals } from "./data.js";
 import { localize, genres } from "./locale.js";
@@ -199,6 +200,7 @@ $("#random").onclick = () =>
     ? select(filtered[Math.floor(Math.random() * filtered.length)])
     : toast("Əvvəlcə axtarış filtrini dəyişin.");
 function modal(html, type = "standard") {
+  clearFilmTheme();
   dialogToken++;
   if ($("#overlay").classList.contains("hidden"))
     lastFocus = document.activeElement;
@@ -225,7 +227,14 @@ function stopTrailer(restoreFocus = false) {
   $("#watch-trailer")?.setAttribute("aria-expanded", "false");
   if (restoreFocus) $("#watch-trailer")?.focus();
 }
+function clearFilmTheme() {
+  const overlay = $("#overlay");
+  overlay.classList.remove("film-atmosphere");
+  for (const key of Object.keys(themeVariables()))
+    overlay.style.removeProperty(key);
+}
 function close() {
+  clearFilmTheme();
   stopTrailer();
   dialogToken++;
   inspectedFilm = null;
@@ -266,6 +275,17 @@ async function select(f, skipAnimation = false) {
     `<div class="detail-art"><img class="detail-poster" src="${esc(f.poster)}" alt="${esc(f.title)} — film posteri"><span class="poster-note">NOIR SEÇİMİ · KİNO ARXİVİ</span></div><div class="detail-content"><div class="eyebrow">HEKAYƏYƏ YAXINLAŞIN</div><h2>${esc(f.title)}</h2><div class="film-meta"><span>${f.year}</span><i></i><span>${esc(f.genre)}</span><span class="rating"><b>${esc(f.ratingSource || "IMDb")}</b> ★ ${f.rating}</span></div><p class="plot">${esc(f.plot || "Bu film üçün Azərbaycan dilində süjet hələ əlavə edilməyib.")}</p><dl class="credits"><div><dt>Rejissor</dt><dd>${esc(f.director)}</dd></div><div><dt>Aktyorlar</dt><dd>${esc(f.cast)}</dd></div></dl><div class="detail-actions"><button type="button" class="button primary" id="watch-trailer" aria-expanded="false" aria-controls="trailer-player">${icon("play")} Treylerə bax</button><button class="button" id="save">${icon(saved.includes(f.id) ? "check" : "heart")} ${saved.includes(f.id) ? "Kolleksiyamdadır" : "Kolleksiyama əlavə et"}</button></div><button class="text-button inspect-case" id="inspect-case">Açılmış 3D qutuya bax →</button><div class="ai-actions"><button id="analyze">${icon("spark")} AI ilə analiz et</button><button id="similar">Oxşar filmləri tap ${icon("arrow")}</button></div><div id="result" class="result" aria-live="polite"></div><p class="metadata-note">${liveCatalog ? "Film məlumatları · Reytinqlər zamanla dəyişir." : "Yerli nümayiş kolleksiyası · Canlı TOP 500 deyil."}</p></div>`,
     "film-panel",
   );
+  const themeToken = dialogToken;
+  const overlay = $("#overlay");
+  const applyPalette = (palette) => {
+    if (dialogToken !== themeToken || overlay.classList.contains("hidden"))
+      return;
+    for (const [key, value] of Object.entries(themeVariables(palette)))
+      overlay.style.setProperty(key, value);
+  };
+  overlay.classList.add("film-atmosphere");
+  applyPalette();
+  loadPosterPalette(f.poster).then(applyPalette);
   const trailerButton = $("#watch-trailer");
   if (!/^[\w-]{11}$/.test(f.trailer || "")) {
     trailerButton.disabled = true;
@@ -326,6 +346,7 @@ async function select(f, skipAnimation = false) {
   }
   $("#inspect-case").onclick = async () => {
     stopTrailer();
+    clearFilmTheme();
     const token = dialogToken;
     const outsideFilter = !filtered.some((item) => item.id === f.id);
     if (outsideFilter) clear();
