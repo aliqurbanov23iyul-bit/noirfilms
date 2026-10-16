@@ -127,6 +127,28 @@ test("missing credentials fail closed and status never exposes secrets", async (
       false,
     );
     assert.equal(res.headers["Cache-Control"], "no-store");
+    for (const path of [
+      "/api/admin/assistant",
+      "/api/admin/ai/check",
+      "/api/admin/translate",
+      "/api/admin/tmdb/add",
+    ]) {
+      const blocked = response();
+      await handler(
+        {
+          url: path,
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: {},
+        },
+        blocked,
+      );
+      assert.equal(
+        blocked.statusCode,
+        503,
+        `${path} must require a configured authenticated admin`,
+      );
+    }
   } finally {
     for (const k of names) {
       if (old[k] === undefined) delete process.env[k];

@@ -19,6 +19,13 @@ export async function getFilm(id) {
   if (!row) throw new HttpError(404, "Film tapılmadı.");
   return filmRow(row);
 }
+export async function fillMissingPlot(id, plot, translationStatus) {
+  const sql = database();
+  const [row] =
+    await sql`UPDATE films SET plot=${plot}, translation_status=${translationStatus}, updated_at=now()
+    WHERE id=${id} AND plot='' RETURNING *`;
+  return row ? filmRow(row) : getFilm(id);
+}
 export async function saveFilm(f, id) {
   const sql = database();
   const [shelf] = await sql`SELECT id FROM shelves WHERE id = ${f.shelfId}`;

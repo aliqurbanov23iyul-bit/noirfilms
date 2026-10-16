@@ -9,11 +9,13 @@ import {
 } from "../server/ai.js";
 import { chatInput, recommendChat } from "../server/chat.js";
 import { handler } from "../server/handler.js";
+import { adminConversation } from "../server/admin-assistant.js";
 
 function setup(t) {
   const keys = [
     "GEMINI_API_KEY",
     "GEMINI_MODEL",
+    "GEMINI_FALLBACK_MODEL",
     "DATABASE_URL",
     "APP_ORIGIN",
     "ADMIN_USERNAME",
@@ -26,6 +28,7 @@ function setup(t) {
   Object.assign(process.env, {
     GEMINI_API_KEY: "fixture-gemini-secret",
     GEMINI_MODEL: "gemini-2.5-flash",
+    GEMINI_FALLBACK_MODEL: "gemini-3.8-flash",
     DATABASE_URL: "postgresql://test:test@test.neon.tech/test",
     APP_ORIGIN: "https://noir.example",
   });
@@ -89,6 +92,67 @@ test("Gemini uses a server header and structured JSON for admin intent and trans
   });
   assert.equal((await parseCommand("Interstellar əlavə et")).year, 2014);
   assert.equal(await translatePlot("Source plot"), "Azərbaycan dilində süjet.");
+});
+
+test("transient Gemini 503 retries twice then uses the configured fallback without changing providers", async (t) => {
+  setup(t);
+  const urls = [];
+  t.mock.method(globalThis, "fetch", async (url) => {
+    urls.push(url);
+    return urls.length < 3
+      ? new Response("Busy", { status: 503 })
+      : gemini({ text: "Hazırdır." });
+  });
+  const result = await modelJSON("Test", "Input", "retry-test", {
+    type: "object",
+    properties: { text: { type: "string" } },
+    required: ["text"],
+  });
+  assert.equal(result.text, "Hazırdır.");
+  assert.equal(urls.length, 3);
+  assert.match(urls[0], /gemini-2.5-flash/);
+  assert.match(urls[1], /gemini-2.5-flash/);
+  assert.match(urls[2], /gemini-3.8-flash/);
+});
+
+test("long provider Retry-After is honored without delaying beyond the function budget", async (t) => {
+  setup(t);
+  const fetch = t.mock.method(
+    globalThis,
+    "fetch",
+    async () =>
+      new Response("Busy", { status: 503, headers: { "retry-after": "120" } }),
+  );
+  await assert.rejects(
+    parseCommand("Film əlavə et"),
+    (error) => error.status === 503 && error.message.includes("503"),
+  );
+  assert.equal(fetch.mock.callCount(), 1);
+});
+
+test("admin conversation preserves discussion history and proposes searches without executing writes", async (t) => {
+  setup(t);
+  t.mock.method(globalThis, "fetch", async (url, options) => {
+    assert.match(String(url), /generativelanguage.googleapis.com/);
+    const payload = JSON.parse(options.body);
+    const input = JSON.parse(payload.contents[0].parts[0].text);
+    assert.equal(input.history[0].text, "Elmi fantastika istəyirəm.");
+    assert.equal(input.collection[0].title, "Interstellar");
+    return gemini({
+      text: "Arrival yaxşı seçimdir. Əlavə etmək üçün axtaraq?",
+      searchTitle: null,
+      year: null,
+    });
+  });
+  const result = await adminConversation(
+    {
+      message: "Nə məsləhət görürsən?",
+      history: [{ role: "user", text: "Elmi fantastika istəyirəm." }],
+    },
+    films,
+  );
+  assert.equal(result.searchTitle, null);
+  assert.match(result.text, /Arrival/);
 });
 
 test("missing Gemini key never calls an external provider", async (t) => {

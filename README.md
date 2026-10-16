@@ -19,8 +19,9 @@ Qızılı kino lentindən qurulmuş **N** monoqramı və mənfi sahədə **play*
 ## Hazırkı vəziyyət
 
 - **İşləyir:** U formalı Three.js otağı, sağa-sola baxış, toxunma/sürükləmə, dik DVD qutuları, rəfdən çıxma, kameraya yaxınlaşma, üz qabığının açılması və 3D disk, məlumat paneli, axtarış, filtrlər, şəxsi seçimlər, sosial keçidlər.
-- **İcra edilən server kodu var, canlı bağlantı yoxdur:** Neon CRUD, rəflər, scrypt admin girişi, verilənlər bazasında saxlanan ləğv edilə bilən sessiyalar, CSRF, davamlı sorğu limitləri, TMDB importu və Gemini əsaslı NOIR AI.
-- **Hazır deyil:** Canlı Neon/Vercel layihəsi, TMDB/Gemini açarları və real TOP 500 importu. Bu hesablar və açarlar təqdim edilməyib. 12 yerli nümunə 500 film kimi təqdim edilmir.
+- **Canlı yayım qurulub:** [noirfilms.vercel.app](https://noirfilms.vercel.app), Neon bazası, admin girişi və TMDB importu. Repo açarlar saxlamır; başqa yayım üçün öz server dəyişənlərinizi qurun.
+- **Ayrıca admin studiyası:** `/admin.html` (və `/admin`), film/rəf idarəsi, sərbəst kino söhbəti, AI-siz TMDB axtarışı, import və Azərbaycan dilində süjetlərin tamamlanması.
+- Gemini-nin real əlçatanlığı, hesab kvotası və 500/500 import statusu ayrıca yoxlanmalıdır. Yerli 12 nümunə canlı TOP 500 kimi göstərilmir.
 - Mövcud `chatgpt.site` ünvanı **statik önbaxışdır**. Vercel funksiyalarını orada işlək kimi göstərmir. Eyni mənbə Vercel-də yayımlanmalıdır.
 
 ## Lokal işə salma
@@ -49,6 +50,7 @@ npm run build
 | `TMDB_READ_ACCESS_TOKEN` | TMDB Read Access Token                                                   |
 | `GEMINI_API_KEY`         | NOIR AI və süjet tərcüməsi                                               |
 | `GEMINI_MODEL`           | Standart `gemini-3.5-flash-lite`; hesabınızda əlçatan modeli seçin                |
+| `GEMINI_FALLBACK_MODEL`  | 5xx/bağlantı xətasından sonra ehtiyat model; standart `gemini-3.8-flash`. Boş dəyər ehtiyat modeli söndürür; modelin tarif və kvotaları tətbiq olunur. |
 | `ADMIN_USERNAME`         | Öz admin istifadəçi adınız                                               |
 | `ADMIN_PASSWORD_HASH`    | Aşağıdakı əmrlə yaradılan scrypt heşi                                    |
 | `ADMIN_SESSION_SECRET`   | Həmin əmrlə yaradılan təsadüfi sirr                                      |
@@ -107,7 +109,11 @@ Saytın teması qara/antrasit fon, isti qızılı vurğular və 3D DVD kino arxi
 
 **Saytdakı çat:** menyudakı **NOIR AI**, sağ altdakı **Bir film tapaq**, yaxud film məlumatındakı **Oxşar filmləri tap** düyməsindən açılır. Admin girişi tələb etmir. İstifadəçi sevdiyi filmi, janrı və ya əhvalını yazır; Gemini canlı kolleksiyadan ən çox 4 film və qısa səbəblər təklif edir. Film kartına toxunanda onun məlumatları açılır. Film səhifəsindən açılan çat seçilmiş filmi nəzərə alır. Çat bazaya yazmır; qaytarılan film ID-ləri serverdə kolleksiya ilə yoxlanılır. Son 8 mesaj sorğuya daxil edilir, söhbət daimi yaddaşa yazılmır. Mesajlar Gemini xidmətinə göndərilir.
 
-**Admin çatı:** yuxarıdakı dişli işarəsi → admin girişi → **NOIR AI**. `Interstellar filmini əlavə et` yazın. Server Gemini Structured Outputs ilə yalnız film əlavə etmə niyyətini ayırır, sonra TMDB-də axtarır. Dəqiq bir uyğunluq varsa Neon-a yazır; qeyri-müəyyənlik varsa posterli namizədlər göstərilir. Admin çatı hazırda yalnız film əlavə etmə əmrlərini dəstəkləyir. AI SQL yaratmır və ixtiyari server əmrləri icra etmir.
+**Admin studiyası:** dişli işarəsi `/admin.html` səhifəsini açır. Əvvəlki təhlükəsiz admin hesabınızla daxil olun. **AI ilə söhbət** bölməsində filmlər, rejissorlar və kolleksiya barədə danışın. Son 8 mesaj nəzərə alınır; söhbət bu səhifənin yaddaşında saxlanır. Film əlavə etmək istəyəndə model TMDB axtarışı təklif edir; yalnız posterli nəticə kartını seçəndə film bazaya yazılır. Söhbət özbaşına SQL və ya server əmri icra etmir. **Gemini bağlantısını yoxla** real, kiçik provider sorğusu göndərir; konfiqurasiya bayrağı uğurlu AI bağlantısı kimi təqdim edilmir.
+
+**AI olmadan əlavə etmək:** **Film əlavə et** bölməsi birbaşa TMDB-də axtarır. Burada Gemini çağırılmır. Açıqlamaları **Azərbaycan dilində süjetlər → Çatışmayan süjetləri tamamla** ilə tərcümə edin və ya film redaktorunda yazın. Tərcümə bir filmə bir sorğu ilə, fasilələrlə gedir; xəta və ya dayandırma son tamamlanan filmləri itirmir. Mövcud açıqlamalar yenidən yazılmır. Google əlçatmazdırsa tərcümənin tamamlandığı iddia edilmir.
+
+**503 davamlılığı:** Gemini 500/502/503/504 və bağlantı xətalarında ən çox üç provider cəhdi var: əsas modeldə iki cəhd, sonra konfiqurasiya edilmiş fərqli ehtiyat modeldə bir cəhd. Artan fasilələr və ümumi 42 saniyə həddi tətbiq olunur. 400/401/403/404 və 429 xətaları avtomatik təkrarlanmır; kvota xətasını ehtiyat modelə keçməklə keçmirik. Bu, Google-un işləyəcəyinə zəmanət deyil; davam edən 503 aydın göstərilir, TMDB ilə film əlavə etmək ayrıca işləyir.
 
 Film analizi də ziyarətçilərə açıqdır. Açıq AI sorğuları eyni origin-dən qəbul olunur, Neon-da hər IP üçün saatda 15 və bütün sayt üçün gündə 200 sorğu ilə məhdudlaşır. Gündəlik hədd provayderin pul büdcəsi deyil; Gemini hesabının öz kvota və xərclərini ayrıca idarə edin. Admin yazma əməliyyatları sessiya və CSRF tələb etməyə davam edir. Bütün cavablar üçün Azərbaycan dili təlimatı verilir. Provayder nəticəsi gəlmədikdə saxta AI cavabı göstərilmir. Yerli alternativlər ayrıca janra əsaslanan seçim kimi işarələnir. Çatın canlı işləməsi üçün Neon miqrasiyası və Gemini açarı lazımdır; admin film əlavə etmək üçün TMDB də qoşulmalıdır.
 
@@ -127,6 +133,7 @@ Film CRUD-u, poster keçidi, rəfə təyinetmə, film sıralaması, rəf yaratma
 - `server/repository.js`: film/rəf SQL əməliyyatları
 - `server/tmdb.js`, `server/ai.js`, `server/importer.js`: provayderlər və TOP 500 prosesi
 - `src/chat.js`, `src/chat.css`, `server/chat.js`: ziyarətçi/admin çat dizaynı, Gemini tövsiyələri və açıq AI limitləri
+- `admin.html`, `src/admin-page.js`, `src/admin-page.css`: ayrıca admin studiyası; `server/admin-assistant.js`, `server/gemini.js`: söhbət və məhdud provider təkrarları
 - `server/schema.sql`, `scripts/`: miqrasiya və gizli şifrə daxil etmə aləti
 - `tests/`: təhlükəsizlik, sessiya, TMDB adapteri və real lokal PostgreSQL mühərriki (PGlite) ilə SQL testləri
 
@@ -136,7 +143,7 @@ Janr filtri çoxjanrlı filmləri hər janr üzrə ayrıca tapır; yerli redakto
 
 Sürükləyin və ya sol/sağ oxlarla baxın; qutuya klikləyin/toxunun; Escape və ya **Rəfə qaytar** ilə geri dönün. **Açılmış 3D qutuya bax** qutunu məlumat paneli olmadan göstərir. **Otağı böyüt** interfeysi geniş otaq rejiminə keçirir.
 
-Böyük kolleksiya 108 filmlik otaq bölmələrinə ayrılır. Bütün 500 poster eyni vaxtda yüklənmir. Üzlük və bel yazıları lokal canvas teksturalarıdır; posterlər məhdud keşlə və tədricən yüklənir. Pixel ratio mobildə 1.35 ilə məhdudlaşır. Boşdayanma, gizli vərəq və siyahı rejimində render dayanır; mobil aktiv animasiyalar təxminən 30 FPS həddi ilə işləyir. Faktiki FPS cihazdan asılıdır.
+Böyük kolleksiya 108 filmlik otaq bölmələrinə ayrılır. Qutular ön üzü görünən vəziyyətdə düzülür. Cari bölmənin bütün posterləri dörd paralel yükləmə ilə alınır; 128 teksturalıq keş hazırda istifadə olunan posterləri silmir. TMDB şəkilləri mobildə w185, böyük ekranda w342 ölçüsündədir. Bütün 500 poster eyni vaxtda GPU-ya yüklənmir. Poster çatışmırsa yerli başlıq təsviri qalır. Pixel ratio mobildə 1.35 ilə məhdudlaşır. Boşdayanma, gizli vərəq və siyahı rejimində render dayanır; mobil aktiv animasiyalar təxminən 30 FPS həddi ilə işləyir. Faktiki FPS cihazdan asılıdır.
 
 Testlərdə TMDB/Gemini xarici cavabları fixture-lərlə əvəz olunur; bu, canlı API yoxlaması deyil. PostgreSQL SQL və sessiya testləri uğurla keçsə də, hesablar qoşulduqdan sonra real Neon/Vercel/TMDB üzərində ayrıca qəbul sınağı tələb olunur.
 

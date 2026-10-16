@@ -3,7 +3,6 @@ import { films as originals } from "./data.js";
 import { localize, genres } from "./locale.js";
 import { icon } from "./icons.js";
 import { createRoom } from "./room.js";
-import { createAdmin } from "./admin.js";
 import { request, capabilities, loadCapabilities } from "./api.js";
 import { filmGenres, catalogGenres } from "./catalog.js";
 import { createCinemaChat } from "./chat.js";
@@ -473,15 +472,9 @@ function editFilm(index) {
     toast("Film məlumatları saxlanıldı.");
   };
 }
-const liveAdmin = createAdmin({
-  modal,
-  toast,
-  esc,
-  onCatalog: applyCatalog,
-  getDemoAdmin: admin,
-});
-$("#admin").onclick = () =>
-  liveAdmin.open().catch((error) => toast(error.message));
+$("#admin").onclick = () => {
+  window.location.href = "/admin.html";
+};
 const cinemaChat = createCinemaChat({
   modal,
   esc,

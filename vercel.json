@@ -3,6 +3,7 @@
   "outputDirectory": "dist",
   "functions": { "api/index.js": { "maxDuration": 60 } },
   "rewrites": [
+    { "source": "/admin", "destination": "/admin.html" },
     { "source": "/api/:path*", "destination": "/api?__noir_route=:path*" }
   ],
   "headers": [
