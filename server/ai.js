@@ -1,8 +1,17 @@
 import { HttpError } from "./http.js";
 import { generateGemini } from "./gemini.js";
+import { generateGroq } from "./groq.js";
+
+export function aiProvider() {
+  return (
+    process.env.AI_PROVIDER || (process.env.GROQ_API_KEY ? "groq" : "gemini")
+  );
+}
 
 export function aiConfigured() {
-  return Boolean(process.env.GEMINI_API_KEY);
+  return aiProvider() === "groq"
+    ? Boolean(process.env.GROQ_API_KEY)
+    : aiProvider() === "gemini" && Boolean(process.env.GEMINI_API_KEY);
 }
 
 // Check provider output again before it is used by admin or public routes.
@@ -42,12 +51,19 @@ function matchesSchema(value, schema) {
 }
 
 export async function modelJSON(instructions, input, name, schema) {
+  const provider = aiProvider();
+  const label = provider === "groq" ? "Groq" : "Gemini";
   if (!aiConfigured())
     throw new HttpError(
       503,
-      "NOIR AI üçün Gemini server açarı hələ əlavə edilməyib.",
+      "NOIR AI server açarı əlavə edilməyib və ya provayder ayarı yanlışdır.",
     );
-  const response = await generateGemini(instructions, input, name, schema);
+  const response = await (provider === "groq" ? generateGroq : generateGemini)(
+    instructions,
+    input,
+    name,
+    schema,
+  );
   if (!response.ok)
     console.warn(
       "NOIR_AI_REQUEST_FAILED",
@@ -57,7 +73,7 @@ export async function modelJSON(instructions, input, name, schema) {
     const seconds = Number(response.headers.get("retry-after"));
     const error = new HttpError(
       429,
-      "Gemini sorğu limiti dolub. İmport saxlanılıb; bir qədər sonra davam edin. Gündəlik kvota bitibsə, Gemini hesabınızdakı kvotanı yoxlayın.",
+      `${label} sorğu limiti dolub. Bir qədər sonra yenidən cəhd edin. Gündəlik kvota bitibsə, AI hesabınızdakı limitləri yoxlayın.`,
     );
     error.retryAfter =
       Number.isFinite(seconds) && seconds > 0
@@ -69,23 +85,32 @@ export async function modelJSON(instructions, input, name, schema) {
     throw new HttpError(
       response.status === 503 ? 503 : 502,
       [401, 403].includes(response.status)
-        ? "Gemini açarı və ya giriş icazəsi qəbul edilmədi. Server açarını yoxlayın."
+        ? `${label} açarı və ya giriş icazəsi qəbul edilmədi. Server açarını yoxlayın.`
         : response.status === 404
-          ? "Seçilmiş Gemini modeli bu hesab üçün əlçatan deyil. Model ayarını yoxlayın."
+          ? `${label} modeli bu hesab üçün əlçatan deyil. Model ayarını yoxlayın.`
           : response.status === 400
-            ? "Gemini sorğusunun parametrləri qəbul edilmədi (HTTP 400). Server konfiqurasiyası yoxlanmalıdır."
+            ? `${label} sorğusunun parametrləri qəbul edilmədi (HTTP 400). Model ayarını yoxlayın.`
             : response.status === 503
-              ? "Gemini hazırda yüklənib (503). Təkrar cəhdlər də nəticə vermədi. Bir qədər sonra yenidən yoxlayın; film əlavə etmək üçün TMDB axtarışı işləyir."
-              : `Gemini xidməti cavab vermədi (HTTP ${response.status}). Sonra yenidən cəhd edin.`,
+              ? `${label} hazırda əlçatmazdır (503). Bir qədər sonra yenidən cəhd edin.`
+              : `${label} xidməti cavab vermədi (HTTP ${response.status}). Sonra yenidən cəhd edin.`,
     );
   try {
     const data = await response.json();
-    const candidate = data.candidates?.[0];
-    if (candidate?.finishReason !== "STOP") throw Error();
-    const output = candidate.content?.parts
-      ?.filter((part) => !part.thought && typeof part.text === "string")
-      .map((part) => part.text)
-      .join("");
+    const candidate =
+      provider === "groq" ? data.choices?.[0] : data.candidates?.[0];
+    if (
+      provider === "groq"
+        ? candidate?.finish_reason !== "stop"
+        : candidate?.finishReason !== "STOP"
+    )
+      throw Error();
+    const output =
+      provider === "groq"
+        ? candidate.message?.content
+        : candidate.content?.parts
+            ?.filter((part) => !part.thought && typeof part.text === "string")
+            .map((part) => part.text)
+            .join("");
     const cleaned = output
       ?.trim()
       .replace(/^```(?:json)?\s*([\s\S]*?)\s*```$/i, "$1");

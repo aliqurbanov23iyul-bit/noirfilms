@@ -17,7 +17,7 @@ import {
 import { database, rateLimit, audit } from "./db.js";
 import * as repo from "./repository.js";
 import { searchTMDB, movieTMDB } from "./tmdb.js";
-import { modelJSON, aiConfigured } from "./ai.js";
+import { modelJSON, aiConfigured, aiProvider } from "./ai.js";
 import { publicAI, chatInput, recommendChat } from "./chat.js";
 import { adminConversation } from "./admin-assistant.js";
 import { startImport, importStep, importStatus } from "./importer.js";
@@ -35,6 +35,7 @@ export async function handler(req, res) {
         auth: authConfigured(),
         tmdb: Boolean(process.env.TMDB_READ_ACCESS_TOKEN),
         ai: aiConfigured(),
+        aiProvider: aiProvider(),
         runtime: process.env.VERCEL ? "vercel-node" : "local-node",
         message: process.env.DATABASE_URL
           ? "Server konfiqurasiyası mövcuddur."
@@ -173,7 +174,7 @@ export async function handler(req, res) {
         if (!source.plot?.trim())
           throw new HttpError(
             503,
-            "Azərbaycan dilində süjet alınmadı. Gemini bağlantısını yoxlayın və ya mətni redaktə bölməsində yazın.",
+            "Azərbaycan dilində süjet alınmadı. AI bağlantısını yoxlayın və ya mətni redaktə bölməsində yazın.",
           );
         const result = await repo.fillMissingPlot(
           film.id,

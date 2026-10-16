@@ -312,7 +312,7 @@ async function ai(action, film) {
   } catch {
     if (token !== dialogToken || !$("#result")) return;
     $("#result").innerHTML =
-      `<p><strong>AI cavabı alınmadı.</strong><br>${esc("Gemini bağlantısını və canlı kolleksiyanı yoxlayın, yaxud bir qədər sonra yenidən cəhd edin.")}</p><button class="text-button" id="curated">Seçilmiş 4 alternativə bax →</button>`;
+      `<p><strong>AI cavabı alınmadı.</strong><br>${esc("AI bağlantısını və canlı kolleksiyanı yoxlayın, yaxud bir qədər sonra yenidən cəhd edin.")}</p><button class="text-button" id="curated">Seçilmiş 4 alternativə bax →</button>`;
     $("#curated").onclick = () => {
       const picks = films
         .filter((f) => f.id !== film.id)

@@ -1,3 +1,13 @@
+# Groq ilə NOIR AI
+
+Vercel-də `GROQ_API_KEY` (yalnız serverdə) əlavə edin və bu dəyişikliyi deploy edin. Groq açarı varsa avtomatik seçilir; köhnə `GEMINI_API_KEY` seçimi dəyişmir. `GROQ_MODEL` standart olaraq `qwen/qwen3.8-27b`-dır. İstəyə görə `AI_PROVIDER=groq` və ya `AI_PROVIDER=gemini` ilə açıq seçim edin. Groq seçilib açar yoxdursa xidmət bağlı qalır; gizli provayder keçidi yoxdur.
+
+Ziyarətçi çatı, film analizi, admin söhbəti, bağlantı sınağı və süjet tərcüməsi eyni seçilmiş provayderdən istifadə edir. Groq üçün JSON object rejimi və serverdə sxem yoxlaması var; tərcümə adi mətn istəyir. Natamam cavablar saxlanmır. Çatda uyğunluğa görə ən çox 20 filmin qısa məlumatı və son 8 mesajın qısaldılmış mətni göndərilir. Admin də qısa kolleksiya kontekstindən istifadə edir. Tam kolleksiyanın hamısı modelə göndərilmir. Mesajlar seçilmiş AI xidmətinə ötürülür.
+
+Pulsuz planın sorğu/token/günlük limitləri var: 445 tərcümə dərhal tamamlanmaya bilər. Kvota bitərsə proses saxlanır, tamamlanan süjetlər qorunur. Admin → AI ilə söhbət → AI bağlantısını yoxla ilə real sorğu göndərərək sınaqdan keçirin. `/api/status` yalnız konfiqurasiyanı və provayder adını göstərir, açarı qaytarmır və uğurlu canlı sınaq demək deyil.
+
+Rəsmi mənbələr: [Groq modelləri](https://console.groq.com/docs/models), [JSON rejimi](https://console.groq.com/docs/structured-outputs), [limitlər](https://console.groq.com/docs/rate-limits). Aşağıdakı Gemini ayarları yalnız Gemini ayrıca seçildikdə tətbiq olunur.
+
 # NOIR CINEMA
 
 ![NOIR CINEMA](public/brand/noir-social.png)
@@ -41,7 +51,7 @@ npm run build
 
 1. [Neon](https://console.neon.tech/) hesabında PostgreSQL layihəsi yaradın və bağlantı sətrini götürün.
 2. [TMDB](https://www.themoviedb.org/settings/api) hesabınızdan **API Read Access Token** alın.
-3. [Google AI Studio](https://aistudio.google.com/api-keys) üzərindən Gemini API açarı yaradın. Yalnız TMDB TOP 500 importu üçün AI açarı məcburi deyil; Azərbaycan dilində olmayan süjetlərin avtomatik tərcüməsi üçün lazımdır.
+3. [Groq Console](https://console.groq.com/) üzərindən Groq API açarı yaradın. Yalnız TMDB TOP 500 importu üçün AI açarı məcburi deyil; Azərbaycan dilində olmayan süjetlərin avtomatik tərcüməsi üçün lazımdır.
 4. `.env.example` faylını `.env` kimi kopyalayın. Gizli dəyərləri yalnız həmin git-ə daxil edilməyən fayla və Vercel **Environment Variables** bölməsinə yazın. Açarları çata, frontend-ə və `VITE_` dəyişənlərinə yazmayın.
 
 | Dəyişən                  | Təyinat                                                                  |
@@ -81,7 +91,7 @@ Eyni repo/mənbəni Vercel layihəsinə bağlayın. Build əmri `npm run build`,
 Vercel üçün qısa yoxlama:
 
 1. Layihə mənbəyini import edin; build `npm run build`, çıxış qovluğu `dist`.
-2. `.env.example`-dəki dəyişənləri Vercel Environment Variables-a əlavə edin. Gemini üçün `GEMINI_API_KEY` və `GEMINI_MODEL` istifadə olunur.
+2. `.env.example`-dəki dəyişənləri Vercel Environment Variables-a əlavə edin. Groq üçün `GROQ_API_KEY` və istəyə görə `GROQ_MODEL` istifadə olunur.
 3. `APP_ORIGIN` dəyərini son sayt ünvanına, məsələn `https://noir-cinema.vercel.app` olaraq yazın; sonda `/` lazım deyil. Lokal önbaxışda isə `.env`-dəki origin və brauzerdəki origin eyni olmalıdır.
 4. `npm run admin:credentials` ilə admin heşi və sessiya sirri yaradın. Lokal `.env`-də canlı Neon bağlantısını yazıb `npm run db:migrate` işlədin.
 5. Vercel-də yeni deployment edin. Dişli işarəsindən adminə daxil olub film əlavə edin və ya TMDB importunu başladın. Sonra ziyarətçi çatını adminsiz yoxlayın.
@@ -105,17 +115,17 @@ Admin hesabına daxil olun → **TOP 500 importu** → importu başladın.
 
 ## NOIR AI
 
-Saytın teması qara/antrasit fon, isti qızılı vurğular və 3D DVD kino arxividir. Həm ziyarətçi, həm admin üçün eyni üslubda mesaj balonları, hazır sorğular və posterli film kartları olan çat hazırlanıb. AI provayderi **Google Gemini**-dir. `GEMINI_MODEL` ilə model dəyişdirilə bilər; standart `gemini-3.5-flash-lite`-dır. Gemini açarı yalnız serverdə saxlanır.
+Saytın teması qara/antrasit fon, isti qızılı vurğular və 3D DVD kino arxividir. Həm ziyarətçi, həm admin üçün eyni üslubda mesaj balonları, hazır sorğular və posterli film kartları olan çat hazırlanıb. AI provayderi `GROQ_API_KEY` varsa **Groq**-dur. `GROQ_MODEL` ilə model dəyişdirilə bilər; standart `qwen/qwen3.8-27b`-dır. Gemini yalnız ayrıca seçildikdə və ya Groq açarı olmadıqda istifadə olunur. Açarlar yalnız serverdə saxlanır.
 
-**Saytdakı çat:** menyudakı **NOIR AI**, sağ altdakı **Bir film tapaq**, yaxud film məlumatındakı **Oxşar filmləri tap** düyməsindən açılır. Admin girişi tələb etmir. İstifadəçi sevdiyi filmi, janrı və ya əhvalını yazır; Gemini canlı kolleksiyadan ən çox 4 film və qısa səbəblər təklif edir. Film kartına toxunanda onun məlumatları açılır. Film səhifəsindən açılan çat seçilmiş filmi nəzərə alır. Çat bazaya yazmır; qaytarılan film ID-ləri serverdə kolleksiya ilə yoxlanılır. Son 8 mesaj sorğuya daxil edilir, söhbət daimi yaddaşa yazılmır. Mesajlar Gemini xidmətinə göndərilir.
+**Saytdakı çat:** menyudakı **NOIR AI**, sağ altdakı **Bir film tapaq**, yaxud film məlumatındakı **Oxşar filmləri tap** düyməsindən açılır. Admin girişi tələb etmir. İstifadəçi sevdiyi filmi, janrı və ya əhvalını yazır; AI canlı kolleksiyadan ən çox 4 film və qısa səbəblər təklif edir. Film kartına toxunanda onun məlumatları açılır. Film səhifəsindən açılan çat seçilmiş filmi nəzərə alır. Çat bazaya yazmır; qaytarılan film ID-ləri serverdə kolleksiya ilə yoxlanılır. Son 8 mesaj sorğuya daxil edilir, söhbət daimi yaddaşa yazılmır. Mesajlar seçilmiş AI xidmətinə göndərilir.
 
-**Admin studiyası:** dişli işarəsi `/admin.html` səhifəsini açır. Əvvəlki təhlükəsiz admin hesabınızla daxil olun. **AI ilə söhbət** bölməsində filmlər, rejissorlar və kolleksiya barədə danışın. Son 8 mesaj nəzərə alınır; söhbət bu səhifənin yaddaşında saxlanır. Film əlavə etmək istəyəndə model TMDB axtarışı təklif edir; yalnız posterli nəticə kartını seçəndə film bazaya yazılır. Söhbət özbaşına SQL və ya server əmri icra etmir. **Gemini bağlantısını yoxla** real, kiçik provider sorğusu göndərir; konfiqurasiya bayrağı uğurlu AI bağlantısı kimi təqdim edilmir.
+**Admin studiyası:** birbaşa `/admin.html` ünvanını açın. Əvvəlki təhlükəsiz admin hesabınızla daxil olun. **AI ilə söhbət** bölməsində filmlər, rejissorlar və kolleksiya barədə danışın. Son 8 mesaj nəzərə alınır; söhbət bu səhifənin yaddaşında saxlanır. Film əlavə etmək istəyəndə model TMDB axtarışı təklif edir; yalnız posterli nəticə kartını seçəndə film bazaya yazılır. Söhbət özbaşına SQL və ya server əmri icra etmir. **AI bağlantısını yoxla** real, kiçik provider sorğusu göndərir; konfiqurasiya bayrağı uğurlu AI bağlantısı kimi təqdim edilmir.
 
 **AI olmadan əlavə etmək:** **Film əlavə et** bölməsi birbaşa TMDB-də axtarır. Burada Gemini çağırılmır. Açıqlamaları **Azərbaycan dilində süjetlər → Çatışmayan süjetləri tamamla** ilə tərcümə edin və ya film redaktorunda yazın. Tərcümə bir filmə bir sorğu ilə, fasilələrlə gedir; xəta və ya dayandırma son tamamlanan filmləri itirmir. Mövcud açıqlamalar yenidən yazılmır. Google əlçatmazdırsa tərcümənin tamamlandığı iddia edilmir.
 
-**503 davamlılığı:** Gemini 500/502/503/504 və bağlantı xətalarında ən çox üç provider cəhdi var: əsas modeldə iki cəhd, sonra konfiqurasiya edilmiş fərqli ehtiyat modeldə bir cəhd. Artan fasilələr və ümumi 42 saniyə həddi tətbiq olunur. 400/401/403/404 və 429 xətaları avtomatik təkrarlanmır; kvota xətasını ehtiyat modelə keçməklə keçmirik. Bu, Google-un işləyəcəyinə zəmanət deyil; davam edən 503 aydın göstərilir, TMDB ilə film əlavə etmək ayrıca işləyir.
+**Xidmət xətaları:** Groq üçün 5xx və bağlantı xətalarında ən çox 3 cəhd və ümumi 42 saniyə həddi var. 429, giriş və sorğu xətaları təkrarlanmır; başqa provayderə avtomatik keçilmir. Xidmətin işləməsinə zəmanət verilmir. Gemini ayrıca seçilərsə əvvəlki ehtiyat model mexanizmi qalır.
 
-Film analizi də ziyarətçilərə açıqdır. Açıq AI sorğuları eyni origin-dən qəbul olunur, Neon-da hər IP üçün saatda 15 və bütün sayt üçün gündə 200 sorğu ilə məhdudlaşır. Gündəlik hədd provayderin pul büdcəsi deyil; Gemini hesabının öz kvota və xərclərini ayrıca idarə edin. Admin yazma əməliyyatları sessiya və CSRF tələb etməyə davam edir. Bütün cavablar üçün Azərbaycan dili təlimatı verilir. Provayder nəticəsi gəlmədikdə saxta AI cavabı göstərilmir. Yerli alternativlər ayrıca janra əsaslanan seçim kimi işarələnir. Çatın canlı işləməsi üçün Neon miqrasiyası və Gemini açarı lazımdır; admin film əlavə etmək üçün TMDB də qoşulmalıdır.
+Film analizi də ziyarətçilərə açıqdır. Açıq AI sorğuları eyni origin-dən qəbul olunur, Neon-da hər IP üçün saatda 15 və bütün sayt üçün gündə 200 sorğu ilə məhdudlaşır. Gündəlik hədd provayderin pul büdcəsi deyil; Gemini hesabının öz kvota və xərclərini ayrıca idarə edin. Admin yazma əməliyyatları sessiya və CSRF tələb etməyə davam edir. Bütün cavablar üçün Azərbaycan dili təlimatı verilir. Provayder nəticəsi gəlmədikdə saxta AI cavabı göstərilmir. Yerli alternativlər ayrıca janra əsaslanan seçim kimi işarələnir. Çatın canlı işləməsi üçün Neon miqrasiyası və seçilmiş AI xidmətinin açarı lazımdır; admin film əlavə etmək üçün TMDB də qoşulmalıdır.
 
 ## İdarəetmə və təhlükəsizlik
 
