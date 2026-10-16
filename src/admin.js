@@ -1,5 +1,10 @@
 import { request, capabilities, setCSRF, loadCapabilities } from "./api.js";
 import { icon } from "./icons.js";
+import {
+  TRANSLATION_PAUSE_SECONDS,
+  waitForTranslation,
+  translateWithCooldown,
+} from "./translation-queue.js";
 import { mountChat } from "./chat.js";
 import { brandLogo } from "./brand.js";
 
@@ -401,7 +406,7 @@ export function createAdmin({ modal, toast, esc, onCatalog, getDemoAdmin }) {
     const { films } = await refresh();
     const missing = films.filter((film) => !film.plot?.trim() && film.tmdbId);
     modal(
-      `<div class="eyebrow">AZƏRBAYCAN DİLİNDƏ SÜJETLƏR</div><h2>Hər filmin öz hekayəsi.</h2><p class="body-copy">${missing.length} filmin süjeti tərcümə gözləyir. Hazır mətnlər və redaktorun yazdığı açıqlamalar dəyişdirilmir.</p><div class="admin-actions"><button class="button primary" id="translate-plots" ${!missing.length ? "disabled" : ""}>Çatışmayan süjetləri tamamla</button><button class="button" id="stop-translations">Dayandır</button><button class="button" id="back-dashboard">Geri</button></div><p id="translation-progress" role="status"></p><p id="admin-message" role="status"></p><p class="body-copy secondary">AI əlçatmaz olarsa proses saxlanır. Kolleksiya bölməsində Redaktə seçərək açıqlamanı özünüz də Azərbaycan dilində yaza bilərsiniz.</p>`,
+      `<div class="eyebrow">AZƏRBAYCAN DİLİNDƏ SÜJETLƏR</div><h2>Hər filmin öz hekayəsi.</h2><p class="body-copy">${missing.length} filmin süjeti tərcümə gözləyir. Hazır mətnlər və redaktorun yazdığı açıqlamalar dəyişdirilmir.</p><div class="admin-actions"><button class="button primary" id="translate-plots" ${!missing.length ? "disabled" : ""}>Çatışmayan süjetləri tamamla</button><button class="button" id="stop-translations">Dayandır</button><button class="button" id="back-dashboard">Geri</button></div><p id="translation-progress" role="status"></p><p id="admin-message" role="status"></p><p class="body-copy secondary">Tərcümələr arasında 15 saniyə fasilə verilir. Qısa limitdə gözlənilib bir dəfə təkrar yoxlanır; uzun və gündəlik limitdə proses saxlanır. Kolleksiya bölməsində Redaktə seçərək açıqlamanı özünüz də Azərbaycan dilində yaza bilərsiniz.</p>`,
     );
     const progress = $("#translation-progress");
     let stop = false;
@@ -422,10 +427,24 @@ export function createAdmin({ modal, toast, esc, onCatalog, getDemoAdmin }) {
           if (stop || !progress.isConnected) break;
           progress.textContent = `${done} / ${missing.length} · ${film.title} tərcümə edilir…`;
           try {
-            await request("/api/admin/translate", {
-              method: "POST",
-              data: { id: film.id },
-            });
+            const completed = await translateWithCooldown(
+              () =>
+                request("/api/admin/translate", {
+                  method: "POST",
+                  data: { id: film.id },
+                }),
+              {
+                stopped: () => stop || !progress.isConnected,
+                onWait: (seconds) => {
+                  progress.textContent =
+                    film.title +
+                    " · Limit fasiləsi: " +
+                    seconds +
+                    " saniyə. Sonra bir dəfə yenidən yoxlanacaq.";
+                },
+              },
+            );
+            if (!completed) break;
             done++;
           } catch (error) {
             if (error.code !== "AI_INVALID_OUTPUT") throw error;
@@ -433,8 +452,19 @@ export function createAdmin({ modal, toast, esc, onCatalog, getDemoAdmin }) {
           }
           if (progress.isConnected)
             progress.textContent = `${done} süjet tamamlandı. ${failed.length} film sonra yenidən yoxlanacaq.${failed.length ? " · " + failed.join(", ") : ""}`;
-          if (done < missing.length && !stop)
-            await new Promise((resolve) => setTimeout(resolve, 2500));
+          if (film !== missing.at(-1) && !stop)
+            await waitForTranslation(TRANSLATION_PAUSE_SECONDS, {
+              stopped: () => stop || !progress.isConnected,
+              onWait: (seconds) => {
+                progress.textContent =
+                  done +
+                  " süjet hazırdır · " +
+                  failed.length +
+                  " film sonra yoxlanacaq · Növbəti filmə " +
+                  seconds +
+                  " saniyə.";
+              },
+            });
         }
         await refresh();
       });
@@ -504,7 +534,12 @@ export function createAdmin({ modal, toast, esc, onCatalog, getDemoAdmin }) {
           label.textContent = `${job.imported || job.cursor} / 500 film import olunub.`;
           showWarning();
           if (!stopped && job.status === "running")
-            await new Promise((resolve) => setTimeout(resolve, 2500));
+            await new Promise((resolve) =>
+              setTimeout(
+                resolve,
+                translationChoice.querySelector("input").checked ? 15000 : 2500,
+              ),
+            );
         }
         await refresh();
         if ($("#import-meter") === importMeter && $("#import-status"))
